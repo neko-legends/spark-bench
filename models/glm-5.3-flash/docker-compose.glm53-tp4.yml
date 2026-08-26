@@ -20,6 +20,8 @@ services:
     volumes:
       # Local checkpoint copy on every node (no cross-node weight sharing).
       - /home/jun/models/glm-5.3-flash-nvfp4:/models/glm:ro
+      # GB10 dense-fallback: force is_v32=False (sparse MLA has no sm_121 kernel).
+      - /home/jun/spark-bench-glm53/patch/attention.py:/usr/local/lib/python3.12/dist-packages/vllm/models/glm5next/nvidia/attention.py:ro
 
     environment:
       HF_HUB_OFFLINE: "1"
@@ -55,9 +57,8 @@ services:
       MASTER_ADDR: "${MASTER_ADDR}"
       MASTER_PORT: "${MASTER_PORT:-25000}"
 
+    entrypoint: ["bash", "-lc"]
     command:
-      - bash
-      - -lc
       - >
         exec vllm serve /models/glm
         --served-model-name glm-5.3-flash-nvfp4
@@ -71,6 +72,7 @@ services:
         --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION:-0.85}
         --enforce-eager
         --enable-prefix-caching
+        --kv-cache-dtype bfloat16
         --enable-chunked-prefill
         --speculative-config '{"method":"mtp","num_speculative_tokens":3}'
         --distributed-executor-backend mp
