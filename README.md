@@ -1,12 +1,18 @@
 # spark-bench
 
-## Latest cluster dashboard — 2026-08-18
+## Latest cluster dashboard — 2026-08-26
+
+![Four-node DGX Spark cluster dashboard running one sequence at 159 generation tok/s with a new engine record of 290.3 generation tok/s](docs/images/spark-dashboard-record-290-tps-2026-08-26.png)
+
+*New engine record: 290.3 gen tok/s (forge card, "record 290.3 gen tok/s"), with 159 gen tok/s live on one active sequence at the moment of the screenshot. Taken 2026-08-26. These dashboards are modified versions of [MiaAI-Lab's sparkDash](https://github.com/MiaAI-Lab/sparkDash).*
 
 ![Four-node DGX Spark cluster dashboard showing live inference performance](docs/images/spark-dashboard-overview.png)
 
+*Cluster overview across forge / anvil / ember / flame. Taken 2026-08-18.*
+
 ![Four-node DGX Spark cluster dashboard running six active sequences at about 230 generation tokens per second](docs/images/spark-dashboard-six-sequences-230-tps.png)
 
-*Six active sequences: 229.9 aggregate generation tok/s (~230 tok/s). Updated August 18, 2026. These dashboards are modified versions of [MiaAI-Lab's sparkDash](https://github.com/MiaAI-Lab/sparkDash).*
+*Six active sequences: 229.9 aggregate generation tok/s (~230 tok/s). Taken 2026-08-18.*
 
 **Run a big AI model on four small NVIDIA boxes — fast — and (optionally)
 keep it caught up with your chat so switching to it feels instant.**
@@ -25,7 +31,7 @@ at real conversation depths runs ~66–93 tok/s; see
 ![C1 decode: TP2 baseline, broken boot, old record, and now](results/c1-decode-journey-2026-08-16.png)
 
 *One day of fixing (2026-08-15 → 08-16): from a misconfigured boot where
-"TP2 beats TP4" to the fastest this cluster has ever run.*
+"TP2 beats TP4" to the fastest this cluster has ever run. Taken 2026-08-16.*
 
 There is also an optional extra: a small *catch-up helper* that quietly keeps
 the local model up to date with your ongoing conversation while you chat on a
@@ -202,6 +208,9 @@ Formal warmed C1 median: **136.25 tok/s** (n=9 clean, sd 1.3, 2026-08-16).
 
 ![The full ledger: decode, prefill, and concurrency — TP2 vs broken vs record vs now](results/ledger-2026-08-16.png)
 
+*The full ledger — TP2 baseline, broken boot, old record, and now, across
+decode, prefill, and C4. Taken 2026-08-16.*
+
 ### Result
 
 Abliterated NVFP4, thinking off, temperature 0, concurrency 1, 2048 completion
@@ -352,8 +361,10 @@ prompt depth — is the variable. Code tasks hold 4.6–4.9 accepted tok/step at
 5–10k (79–93 tok/s); repetitive prose drops to 2.1–2.4 (52–64 tok/s). C4
 aggregate is 182 tok/s.
 
-![decode at depth](results/decode-at-depth-2026-08-15.png)
-![c4 aggregate](results/c4-aggregate-2026-08-15.png)
+![Decode at depth: C1 tok/s vs prompt depth, measured 2026-08-15](results/decode-at-depth-2026-08-15.png)
+![C4 aggregate tok/s, measured 2026-08-15](results/c4-aggregate-2026-08-15.png)
+
+*Both charts taken 2026-08-15.*
 
 ### Reproduce the C1 number
 
