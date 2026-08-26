@@ -22,12 +22,15 @@ services:
       - /home/jun/models/glm-5.3-flash-nvfp4:/models/glm:ro
       # GB10 dense-fallback: force is_v32=False (sparse MLA has no sm_121 kernel).
       - /home/jun/spark-bench-glm53/patch/attention.py:/usr/local/lib/python3.12/dist-packages/vllm/models/glm5next/nvidia/attention.py:ro
+      - /home/jun/spark-bench-glm53/patch:/nlp:ro
 
     environment:
       HF_HUB_OFFLINE: "1"
       TRANSFORMERS_OFFLINE: "1"
       HF_HUB_DISABLE_XET: "1"
       VLLM_HOST_IP: "${VLLM_HOST_IP}"
+      VLLM_PLUGINS: "nope_mla"
+      PYTHONPATH: "/nlp"
 
       # GB10 = sm_121a — without these, kernels JIT-compile for the wrong arch.
       TORCH_CUDA_ARCH_LIST: "12.1a"
