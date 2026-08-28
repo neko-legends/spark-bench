@@ -78,14 +78,76 @@ recipe, fabric runbooks, boot gate, and bench archive outgrew the old name.)*
 
 <a id="glm-5-3-flash"></a>
 
-## GLM 5.3 Flash — 4× DGX Spark (SGLang + NVFP4 + DFlash2)
+## GLM 5.3 Flash — 4× DGX Spark (EXL3 TP4 — current primary)
 
-*Added 2026-08-28. GLM-5.3-Flash (320B total / 18B active MoE) across four
-DGX Sparks at TP=4: official-quality NVFP4 weights, fp8 KV cache, and the
-incoai DFlash2 block-diffusion drafter — the fastest of the three stacks we
-benched head-to-head on the same night, same fabric, same ruler.*
+*Added 2026-08-28, updated same day. GLM-5.3-Flash (320B total / 18B active
+MoE) across four DGX Sparks at TP=4. Two stacks benched head-to-head on the
+same night, same fabric, same rulers: the **EXL3 4bpw vLLM stack** (MiaAI
+overlay — now primary) and the **SGLang NVFP4 + DFlash2** stack (fallback).
 
-![Three-way GLM-5.3-Flash benchmark: SGLang NVFP4+DFlash2 wins all five categories](docs/images/glm-5-3-flash-nvfp4-dflash2-bench-2026-08-28.webp)
+EXL3 4bpw measures **KLD 0.0246 vs the BF16 teacher — statistically equal to
+official FP8** (NVFP4 is 0.0605), at the same ~176 GB footprint. It runs on
+the vLLM stack, so the sglang >2^18 prefill wall does not apply: 420k
+context is live and a real 382k-token cold prefill has passed.*
+
+![GLM-5.3-Flash EXL3 TP4 vs SGLang NVFP4 benchmark](docs/images/glm-5-3-flash-exl3-tp4-bench-2026-08-28.webp)
+
+*The screenshot shows the 900k-context boot; the deployed config is 420k
+context on port 18888 (re-benched: no decode regression).*
+
+### GLM 5.3 config instructions (for AI agents)
+
+**Primary stack — EXL3 TP4 + DFlash2 k=7 (vLLM):**
+
+- Weights: `Mia-AiLab/GLM-5.3-Flash-EXL3-TR3-4bpw` (~164 GiB) at
+  `/home/jun/models/glm-5.3-flash-exl3` on all four nodes
+- Image: `ghcr.io/miaai-lab/glm-5.3-flash-2x-dgx-sparks:exl3` (public,
+  20.9 GB) on all four nodes
+- Drafter: `incoai/GLM-5.3-Flash-DFlash2` at
+  `/home/jun/models/glm-5.3-flash-dflash2` (k=7, draft TP=1 on rank 0)
+- **Launch: `bash /home/jun/launch-glm53-exl3-tp4.sh` on forge.** It
+  preflights all four nodes (stops the sglang stack, drops caches, gates at
+  95 GB avail RAM), stages NCCL 2.30.7, launches workers rank 3→2→1 then
+  head rank 0, API on `forge:18888`, served id `GLM-5.3-Flash-EXL3`.
+- Context 420000 (`MAX_MODEL_LEN`), KV pool 3.38M tokens, max 4 concurrent
+- Recipe provenance: [MiaAI-Lab/GLM-5.3-Flash-EXL3-2x-DGX-Sparks](https://github.com/MiaAI-Lab/GLM-5.3-Flash-EXL3-2x-DGX-Sparks)
+  (TP2 original — the overlay solves NoPE sparse-MLA on SM121, keeps experts
+  packed trellis, and adds the DFlash2 hooks). Cloned at
+  `/home/jun/glm53-exl3-recipe` on forge.
+- **Landmines:** `GPU_MEM_UTIL` must be 0.82 (the recipe's 0.87 exceeds GB10
+  startup free memory: 104.9/121.7 GiB); NCCL needs the pip 2.30.7 preload
+  from `~/nccl-2.30.7` (the image torch NCCL 2.29.7 breaks RoCE on this
+  fabric) plus `NCCL_IB_GID_INDEX=-1` (the correct GID index differs per
+  node); fabric is rail B — HCA `roceP2p1s0f1`, if `enP2p1s0f1np1`,
+  192.168.10.0/24. Boot is ~14 min; DFlash acceptance needs a few warmup
+  requests before it reads full speed.
+- Thinking is a real switch here: top-level
+  `"chat_template_kwargs": {"enable_thinking": false}`. Prose decode is
+  inherently slower (DFlash2 prose accept ≈ 0.33 — drafts badly on open
+  text); the lever is `DFLASH_TOKENS` (try 8) if it ever matters.
+- Bench: `/tmp/bench_exl3.py` on forge (`warmup` / `single` / `c4`).
+  Note: this vLLM build streams reasoning as `delta.reasoning` (not
+  `reasoning_content`) — token counters must sum all three delta keys.
+
+**Fallback stack — SGLang NVFP4 + DFlash2 (kept as a dash world):**
+
+- Launch: `bash /home/jun/launch-glm53-nvfp4-dflash.sh` on forge (port
+  18888, served id `glm-5.3-flash`, 262144 context **hard cap** — see
+  Stability boundary below)
+- Wins single-stream prose and is the only stack with server-default
+  `clear_thinking` hygiene. Reachable by switching the dash world in
+  `config/tp4-world.json` (`glm53-sglang` vs `glm53-exl3`).
+
+**Head-to-head (2026-08-28, warm, client wall, same rulers):**
+
+| Config | code | structured | math | prose | C4 steady agg | ctx |
+|---|---:|---:|---:|---:|---:|---:|
+| SGLang NVFP4+DFlash2 (think on) | 53.5 | 88.3 | 82.7 | 34.1 | 90 | 262k |
+| EXL3 TP4 (think on) | 38.6 | 91.3 | 75.2 | 30.3 | — | 900k* |
+| **EXL3 TP4 (think off)** | **64.5** | **100.9** | 77.8 | 23.1 | **253** (4×63.3) | 420k live |
+
+\* 900k boots fine; 420k is the deployed config. Math is within noise of
+sglang; prose is the accept-rate characteristic above, not a stack defect.
 
 ### Final numbers (2026-08-28, RoCE fabric, warm, client wall)
 
