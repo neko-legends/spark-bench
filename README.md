@@ -1,5 +1,7 @@
 # spark-bench
 
+> **Jump to:** **[DeepSeek V4 Flash](#deepseek-v4-flash)** (vLLM + MTP, 136 tok/s C1) · **[GLM 5.3 Flash](#glm-5-3-flash)** (SGLang + NVFP4 + DFlash2, 88 tok/s structured C1)
+
 ## Latest cluster dashboard — 2026-08-26
 
 ![Four-node DGX Spark cluster dashboard running one sequence at 159 generation tok/s with a new engine record of 290.3 generation tok/s](docs/images/spark-dashboard-record-290-tps-2026-08-26.png)
@@ -74,6 +76,8 @@ recipe, fabric runbooks, boot gate, and bench archive outgrew the old name.)*
 
 ---
 
+<a id="glm-5-3-flash"></a>
+
 ## GLM 5.3 Flash — 4× DGX Spark (SGLang + NVFP4 + DFlash2)
 
 *Added 2026-08-28. GLM-5.3-Flash (320B total / 18B active MoE) across four
@@ -95,6 +99,8 @@ benched head-to-head on the same night, same fabric, same ruler.*
 | C1 prose | **33.0 / 34.1** |
 | C4 aggregate | **90.0** |
 | TTFT (short prompt) | 0.20–0.50 s |
+
+![Final GLM-5.3-Flash numbers: RoCE vs Socket, and the NCCL/GID fix recipe](docs/images/glm-5-3-flash-final-numbers-roce-2026-08-28.webp)
 
 How the levers stacked (same cluster, same night):
 
@@ -296,6 +302,8 @@ python3 -m catchup --listen 127.0.0.1:18900 --vllm http://HEAD:18888/v1
 ```
 
 ---
+
+<a id="deepseek-v4-flash"></a>
 
 ## DeepSeek V4 Flash — 4× DGX Spark serving recipe (vLLM + MTP)
 
