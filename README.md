@@ -83,30 +83,38 @@ benched head-to-head on the same night, same fabric, same ruler.*
 
 ![Three-way GLM-5.3-Flash benchmark: SGLang NVFP4+DFlash2 wins all five categories](docs/images/glm-5-3-flash-nvfp4-dflash2-bench-2026-08-28.webp)
 
-### Three-way A/B/C (2026-08-28, client wall, warming)
+### Final numbers (2026-08-28, RoCE fabric, warm, client wall)
 
-Same cluster, same Socket-NCCL fabric, same prompts, back to back:
+**SGLang + NVFP4 + DFlash2, TP4, NCCL over RoCE:**
 
-| Ruler | SGLang FP8 + DFlash2 | vLLM NVFP4 + MTP | **SGLang NVFP4 + DFlash2** |
+| Ruler | tok/s (2 runs) |
+|---|---:|
+| C1 code | **53.5 / 51.9** |
+| C1 structured | **88.3 / 85.3** |
+| C1 math | **72.1 / 82.7** |
+| C1 prose | **33.0 / 34.1** |
+| C4 aggregate | **90.0** |
+| TTFT (short prompt) | 0.20–0.50 s |
+
+How the levers stacked (same cluster, same night):
+
+| Config | code | structured | C4 agg |
 |---|---:|---:|---:|
-| C1 code | 16.4 | 18.7 | **21.3** |
-| C1 structured | 33.5 | 24.7 | **38.1** |
-| C1 math | 27.2 | 22.6 | **32.5** |
-| C1 prose | 12.7 | 10.7 | **15.2** |
-| C4 aggregate | 35.4 | 29.8 | **51.7** |
+| SGLang FP8 + DFlash2, Socket NCCL | 16.4 | 33.5 | 35.4 |
+| vLLM NVFP4 + MTP, Socket NCCL | 18.7 | 24.7 | 29.8 |
+| SGLang NVFP4 + DFlash2, Socket NCCL | 21.3 | 38.1 | 51.7 |
+| **SGLang NVFP4 + DFlash2, RoCE** | **53.5** | **88.3** | **90.0** |
 
-The drafter (DFlash2 acceptance) and the halved weight-read bytes (NVFP4)
-stack multiplicatively. Warm engine-side log on the winner: **59.5 tok/s
-aggregate under 4 parallel streams**, single-stream structured at accept
-len 7.95 / rate ~1.0. Cold-vs-warm is real on spec-decode: acceptance was
-2.6 at first boot and 7.95 an hour in — never bench a cold spec server.
+DFlash2 acceptance and NVFP4's halved weight-read bytes stack
+multiplicatively, and the RoCE fix was worth another ~2.5× on top of the
+Socket winner. Cold-vs-warm is real on spec-decode: acceptance was 2.6 at
+first boot and 7.95+ an hour in — never bench a cold spec server.
 
-Honest context: DeepSeek V4 Flash still wins raw decode on this cluster by
-a wide margin (136 vs ~38 C1) — GLM-5.3-Flash is a much heavier model per
+Honest context: DeepSeek V4 Flash still wins raw decode on this cluster
+(136 vs ~88 C1 best-case) — GLM-5.3-Flash is a much heavier model per
 token. What this lane buys is GLM-5.3 quality + DFlash2 + 262k context,
-serving today, at agent-usable speeds. Field norm for this model on
-4 Sparks is ~23 tok/s C1 (native MTP); DFlash2's honest gain is 1.3–1.4×
-over MTP, not the 2.8× headline (which is vs plain autoregressive).
+serving today, at agent-usable speeds. The 2.8× DFlash2 headline is vs
+plain autoregressive; vs MTP the honest gain is 1.3–1.4×.
 
 ### The config
 
@@ -140,10 +148,15 @@ over MTP, not the 2.8× headline (which is vs plain autoregressive).
    (`DSATopKBackend.resolve` AttributeError). `docker save | ssh docker
    load` the exact stack everywhere — the receipt ledger's "mystery garbage
    boot" warning is real.
-2. **Socket NCCL works, RoCE needs the right HCA names.** The stock image's
-   NCCL refused our fabric's QP connect; `NCCL_NET=Socket` over the CX-7
-   got us serving at a ~25–30% decode penalty vs the receipt's RoCE
-   numbers. Fixing RoCE is the next uplift.
+2. **RoCE on this fabric = NCCL version + GID auto-detect.** The stock
+   image loads NCCL 2.29.7, which fails `ibv_modify_qp` RTR on our CX-7
+   RoCE. The fix: `LD_PRELOAD` the image's pip NCCL 2.30.7
+   (`/opt/sglang/lib/python3.12/site-packages/nvidia/nccl/lib/libnccl.so.2`)
+   plus `NCCL_IB_GID_INDEX=-1` — our nodes' RoCEv2 GID indices DIFFER per
+   host (forge: 3, flame: 5), so a forced index reads zeros on some nodes
+   and connect dies with `remote GID ::`. With those two: full IB channels,
+   2.5× decode uplift over `NCCL_NET=Socket`. (NCCL 2.28.x is too old for
+   this torch — missing `ncclCommResume`.)
 3. **Bench with `stream_options: {"include_usage": true}`.** SGLang bundles
    ~accept-len tokens per SSE delta under spec-decode — counting stream
    chunks undercounts by ~8×.
