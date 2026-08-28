@@ -149,6 +149,27 @@ plain autoregressive; vs MTP the honest gain is 1.3–1.4×.
 - [tonyd2wild/GLM-5.3-Flash-NVFP4-2x-DGX-Spark](https://github.com/tonyd2wild/GLM-5.3-Flash-NVFP4-2x-DGX-Spark) — the parallel vLLM lane (our second column), KV sizing doctrine, cache-flush ritual
 - [incoai/GLM-5.3-Flash-DFlash2](https://huggingface.co/incoai/GLM-5.3-Flash-DFlash2) — the drafter (CC BY-NC-ND 4.0, research/eval)
 
+### Thinking hygiene: `clear_thinking=true` is our server default
+
+GLM-5.3 always thinks; `chat_template_kwargs.clear_thinking` controls
+whether prior turns' `reasoning_content` is re-read or stripped. Measured
+on this stack (2-turn conversation, ~1000 tokens of prior thinking in
+history):
+
+| `clear_thinking` | prompt tokens for the next turn |
+|---|---:|
+| `false` | 1,029 |
+| `true` | 28 |
+
+Carried reasoning compounds: every turn re-reads every previous turn's
+thinking — slower prefills, and accumulated reasoning echo is a known
+degeneration vector. The launcher sets
+`--default-chat-template-kwargs '{"clear_thinking": true}'` so every client
+gets hygienic history without asking. Coding agents that deliberately want
+to preserve reasoning across turns (the model authors' intended coding
+mode) can still pass `clear_thinking: false` per-request and carry
+`reasoning_content` in assistant messages.
+
 ### Stability boundary: 262144 is the cap, and it is a hard one
 
 We run `--context-length 262144` (2^18 exactly). Do not raise it. Upstream
