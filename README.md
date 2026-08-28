@@ -93,7 +93,18 @@ context is live and a real 382k-token cold prefill has passed.*
 ![GLM-5.3-Flash EXL3 TP4 vs SGLang NVFP4 benchmark](docs/images/glm-5-3-flash-exl3-tp4-bench-2026-08-28.webp)
 
 *The screenshot shows the 900k-context boot; the deployed config is 420k
-context on port 18888 (re-benched: no decode regression).*
+context on port 18888.*
+
+**420k verification (2026-08-28, deployed config):**
+
+- KV pool: **3,377,466 tokens** — 8× a full 420k request
+- A real **382,512-token cold prefill passed**: clean "OK" reply, no wedge —
+  the exact workload class that node-wedged the SGLang stack twice
+- Re-bench at 420k (thinking on): structured **93.7** / code **37.8** /
+  math **74.5** / prose **36.2** tok/s — no regression vs the 900k boot.
+  Note the prose 23.1 in the table above is the **thinking-off** mode;
+  at 420k with thinking on, prose reads 36.2 — mode difference, not a
+  regression between context configs.*
 
 ### GLM 5.3 config instructions (for AI agents)
 
