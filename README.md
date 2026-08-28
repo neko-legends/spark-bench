@@ -160,6 +160,22 @@ context on port 18888.*
 \* 900k boots fine; 420k is the deployed config. Math is within noise of
 sglang; prose is the accept-rate characteristic above, not a stack defect.
 
+### Live dashboard record (2026-08-28)
+
+The dash (eva:5555) tracks decode high-water marks per model — a model
+switch no longer buries the new model under the old one's peaks
+(DeepSeek's 290.3 stays on disk under its own key). GLM's first record
+landed the same day:
+
+![sparkDash live record: GLM-5.3-Flash-EXL3 at 119 gen tok/s](docs/images/glm-5-3-flash-exl3-dash-record-119-2026-08-28.webp)
+
+**119 gen tok/s**, engine-log measured by the dash's trusted-throughput
+path (vLLM's own 10-second engine averages, not completion-dump counter
+spikes). This is an in-service aggregate — overlapping live requests —
+so it reads differently from the client-wall C1/C4 bench rows above;
+both are true, they measure different things. The record survives dash
+restarts and attributes itself to the model that earned it.
+
 ### Final numbers (2026-08-28, RoCE fabric, warm, client wall)
 
 **SGLang + NVFP4 + DFlash2, TP4, NCCL over RoCE:**
