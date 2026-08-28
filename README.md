@@ -62,6 +62,92 @@ chat software (`docs/BRIDGES.md`) to be useful.
 *(formerly `dspark-kv-prefill-catchup` — renamed 2026-08-16; the serving
 recipe, fabric runbooks, boot gate, and bench archive outgrew the old name.)*
 
+**Two model lanes live in this repo:**
+
+- **DeepSeek V4 Flash** — the original recipe below (vLLM, TP4, abliterated
+  NVFP4, MTP). Fastest raw decode we have measured on this cluster
+  (136 tok/s C1).
+- **GLM 5.3 Flash** — added 2026-08-28: SGLang, TP4, NVFP4 weights +
+  DFlash2 block-diffusion drafter. Slower per token than DeepSeek on this
+  hardware, but a stronger model class with 262k context serving today and
+  1M reachable. See [the GLM 5.3 Flash section](#glm-53-flash--4-dgx-spark-sglang--nvfp4--dflash2).
+
+---
+
+## GLM 5.3 Flash — 4× DGX Spark (SGLang + NVFP4 + DFlash2)
+
+*Added 2026-08-28. GLM-5.3-Flash (320B total / 18B active MoE) across four
+DGX Sparks at TP=4: official-quality NVFP4 weights, fp8 KV cache, and the
+incoai DFlash2 block-diffusion drafter — the fastest of the three stacks we
+benched head-to-head on the same night, same fabric, same ruler.*
+
+![Three-way GLM-5.3-Flash benchmark: SGLang NVFP4+DFlash2 wins all five categories](docs/images/glm-5-3-flash-nvfp4-dflash2-bench-2026-08-28.webp)
+
+### Three-way A/B/C (2026-08-28, client wall, warming)
+
+Same cluster, same Socket-NCCL fabric, same prompts, back to back:
+
+| Ruler | SGLang FP8 + DFlash2 | vLLM NVFP4 + MTP | **SGLang NVFP4 + DFlash2** |
+|---|---:|---:|---:|
+| C1 code | 16.4 | 18.7 | **21.3** |
+| C1 structured | 33.5 | 24.7 | **38.1** |
+| C1 math | 27.2 | 22.6 | **32.5** |
+| C1 prose | 12.7 | 10.7 | **15.2** |
+| C4 aggregate | 35.4 | 29.8 | **51.7** |
+
+The drafter (DFlash2 acceptance) and the halved weight-read bytes (NVFP4)
+stack multiplicatively. Warm engine-side log on the winner: **59.5 tok/s
+aggregate under 4 parallel streams**, single-stream structured at accept
+len 7.95 / rate ~1.0. Cold-vs-warm is real on spec-decode: acceptance was
+2.6 at first boot and 7.95 an hour in — never bench a cold spec server.
+
+Honest context: DeepSeek V4 Flash still wins raw decode on this cluster by
+a wide margin (136 vs ~38 C1) — GLM-5.3-Flash is a much heavier model per
+token. What this lane buys is GLM-5.3 quality + DFlash2 + 262k context,
+serving today, at agent-usable speeds. Field norm for this model on
+4 Sparks is ~23 tok/s C1 (native MTP); DFlash2's honest gain is 1.3–1.4×
+over MTP, not the 2.8× headline (which is vs plain autoregressive).
+
+### The config
+
+- Image: `lmsysorg/sglang:glm-5.3-flash` + patch layer (0xSero sm121 stack
+  + GLM DFlash capture PRs #36708/#36755) — built locally as
+  `glm53-sglang-sm121:dflash`.
+- Weights: NVFP4 (`modelopt_fp4`, 182 GiB total, ~45 GiB/rank), DFlash2
+  drafter (2.2 GiB BF16) mounted on every node.
+- Serve flags: `--tp-size 4 --nnodes 4 --quantization modelopt_fp4
+  --moe-runner-backend flashinfer_cutlass --ep-size 4 --kv-cache-dtype
+  fp8_e4m3 --dsa-prefill-backend flashinfer_sparse_mla
+  --dsa-decode-backend flashinfer_sparse_mla --speculative-algorithm DFLASH
+  --speculative-draft-model-path <dflash2> --speculative-num-draft-tokens 8
+  --chunked-prefill-size 2048 --context-length 262144
+  --max-running-requests 8 --mem-fraction-static 0.80
+  --cuda-graph-max-bs-decode 8 --reasoning-parser glm45
+  --tool-call-parser glm47`
+- Boot: ~7 min (NVFP4 loads 2× faster than FP8). Workers first, head last.
+
+### Provenance and receipts
+
+- [joesinvestments/GLM-5.3-Flash-FP8-4x-DGX-Spark](https://github.com/joesinvestments/GLM-5.3-Flash-FP8-4x-DGX-Spark) — the 4× FP8 SGLang formula + frozen flag set this builds on
+- [0xSero/glm-5.3-flash-sglang-sm120](https://github.com/0xSero/glm-5.3-flash-sglang-sm120) — the six-patch sm12x compatibility stack (unlocks `flashinfer_sparse_mla` DSA on GB10)
+- [tonyd2wild/GLM-5.3-Flash-NVFP4-2x-DGX-Spark](https://github.com/tonyd2wild/GLM-5.3-Flash-NVFP4-2x-DGX-Spark) — the parallel vLLM lane (our second column), KV sizing doctrine, cache-flush ritual
+- [incoai/GLM-5.3-Flash-DFlash2](https://huggingface.co/incoai/GLM-5.3-Flash-DFlash2) — the drafter (CC BY-NC-ND 4.0, research/eval)
+
+### Gotchas we hit (so you don't)
+
+1. **Uniform image on every rank, byte for byte.** Our first boot died on
+   one rank because the workers' base-image digest differed from the head's
+   (`DSATopKBackend.resolve` AttributeError). `docker save | ssh docker
+   load` the exact stack everywhere — the receipt ledger's "mystery garbage
+   boot" warning is real.
+2. **Socket NCCL works, RoCE needs the right HCA names.** The stock image's
+   NCCL refused our fabric's QP connect; `NCCL_NET=Socket` over the CX-7
+   got us serving at a ~25–30% decode penalty vs the receipt's RoCE
+   numbers. Fixing RoCE is the next uplift.
+3. **Bench with `stream_options: {"include_usage": true}`.** SGLang bundles
+   ~accept-len tokens per SSE delta under spec-decode — counting stream
+   chunks undercounts by ~8×.
+
 ---
 
 ## For engineers: what's in here
@@ -198,7 +284,7 @@ python3 -m catchup --listen 127.0.0.1:18900 --vllm http://HEAD:18888/v1
 
 ---
 
-## 4× DGX Spark serving recipe
+## DeepSeek V4 Flash — 4× DGX Spark serving recipe (vLLM + MTP)
 
 Uncensored DeepSeek V4 Flash 0731 NVFP4, tensor-parallel across four NVIDIA
 DGX Sparks (GB10) on a switched CX-7 RoCE fabric.
