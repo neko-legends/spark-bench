@@ -139,6 +139,8 @@ plain autoregressive; vs MTP the honest gain is 1.3–1.4×.
   --cuda-graph-max-bs-decode 8 --reasoning-parser glm45
   --tool-call-parser glm47`
 - Boot: ~7 min (NVFP4 loads 2× faster than FP8). Workers first, head last.
+- Serving cap: `--max-running-requests 4` (heavier model than DeepSeek;
+  queue the rest). Both engine-level and router-level admission.
 
 ### Provenance and receipts
 
@@ -146,6 +148,33 @@ plain autoregressive; vs MTP the honest gain is 1.3–1.4×.
 - [0xSero/glm-5.3-flash-sglang-sm120](https://github.com/0xSero/glm-5.3-flash-sglang-sm120) — the six-patch sm12x compatibility stack (unlocks `flashinfer_sparse_mla` DSA on GB10)
 - [tonyd2wild/GLM-5.3-Flash-NVFP4-2x-DGX-Spark](https://github.com/tonyd2wild/GLM-5.3-Flash-NVFP4-2x-DGX-Spark) — the parallel vLLM lane (our second column), KV sizing doctrine, cache-flush ritual
 - [incoai/GLM-5.3-Flash-DFlash2](https://huggingface.co/incoai/GLM-5.3-Flash-DFlash2) — the drafter (CC BY-NC-ND 4.0, research/eval)
+
+### Stability boundary: 262144 is the cap, and it is a hard one
+
+We run `--context-length 262144` (2^18 exactly). Do not raise it. Upstream
+bug: [sglang #36550 — GLM-5.3-Flash worker abort (CUDA error in
+graph-replay context) at first decode token after cold prefill > 262144
+tokens](https://github.com/sgl-project/sglang/issues/36550) (open as of
+2026-08-28).
+
+On unified-memory GB10 the blast radius is worse than a worker abort — it
+takes the **node** down. Our evidence (2026-08-28, this exact config):
+
+- Staged-prefill test (radix-cache deltas, same prefix): ~87k and ~174k
+  prompts passed; the node died during the ~300k stage. A second cold
+  ~420k attempt wedged it again. Two hard hangs, same workload class.
+- `journalctl -k` from the crashed boot shows the driver itself OOM-ing:
+  repeated `NVRM: nvCheckOkFailedNoLog: Out of memory [NV_ERR_NO_MEMORY]
+  ... _memdescAllocInternal @ mem_desc.c:1359` in the final minutes. On
+  shared-memory silicon there is no "just the process died" — the CUDA
+  driver and sshd live in the same physical pool.
+- Decode at any depth, C4 load, and short prefills are stable for hours.
+  Only >2^18-token cold prefills are radioactive.
+
+KV pool at this cap (NVFP4, fp8 KV, mem-fraction 0.80): **3,466,048
+tokens** — 13 full-depth concurrent requests, far above the 4-sequence
+serving cap. A daily watcher checks #36550; when it closes, 420k becomes
+testable.
 
 ### Gotchas we hit (so you don't)
 
