@@ -87,8 +87,37 @@ overlay — now primary) and the **SGLang NVFP4 + DFlash2** stack (fallback).
 
 EXL3 4bpw measures **KLD 0.0246 vs the BF16 teacher — statistically equal to
 official FP8** (NVFP4 is 0.0605), at the same ~176 GB footprint. It runs on
-the vLLM stack, so the sglang >2^18 prefill wall does not apply: 420k
-context is live and a real 382k-token cold prefill has passed.*
+the vLLM stack, so the sglang >2^18 prefill wall does not apply: **1M
+context is live** (KV pool 6.04M tokens — 6× a full request) and a real
+382k-token cold prefill has passed.*
+
+> **State of the stack (2026-08-28 evening):** served at `forge:18888`,
+> 1M context, DFlash2 k=7, 4 concurrent max. Day-of upstream fixes from
+> [MiaAI's recipe repo](https://github.com/MiaAI-Lab/GLM-5.3-Flash-EXL3-2x-DGX-Sparks)
+> (all runtime-mounted patches, no image rebuild):
+>
+> - **Prefix caching actually works now** (hybrid APC fix): hit rate
+>   8.5% → **84%** — follow-up turns reuse their MLA pages instead of
+>   recomputing the whole history. The single biggest interactive-speed win.
+> - **KV pool doubled** (padded slot-share): the DFlash2 drafter's KV pages
+>   co-own the MLA tensors. That's what made 1M allocate at all — 900k was
+>   the ceiling before.
+> - **Decode floor during big prefills** (scheduler patch,
+>   `GLM53_MIXED_PREFILL_CHUNK=skip`): a 100k cold prefill used to drag a
+>   decoding peer from ~55 tok/s to ~5; now prefill defers while anyone
+>   decodes.
+> - **Thinking mode no longer self-terminates** (suppress-stops patch):
+>   reasoning text that restates harness stop strings (e.g. `Question:`)
+>   stays dormant until `</think>` — no more empty content after CoT.
+> - **Triton/TileLang caches persist** across container recreates (first
+>   post-boot shapes no longer JIT mid-serve).
+> - *Skipped:* their `boot-shape-warmup` script — its sampler arms wedged
+>   two requests for two hours under an xgrammar FSM failure loop. We warm
+>   with the bench instead; our launcher defaults to `--no-warmup`.
+>
+> Note: vLLM reports ~977k as the observed max model length for the 1M
+> config (engine slack); the dash shows the pair as 977k observed / 1M
+> desired — both real, not an error.
 
 ![GLM-5.3-Flash EXL3 TP4 vs SGLang NVFP4 benchmark](docs/images/glm-5-3-flash-exl3-tp4-bench-2026-08-28.webp)
 
@@ -120,7 +149,8 @@ context on port 18888.*
   preflights all four nodes (stops the sglang stack, drops caches, gates at
   95 GB avail RAM), stages NCCL 2.30.7, launches workers rank 3→2→1 then
   head rank 0, API on `forge:18888`, served id `GLM-5.3-Flash-EXL3`.
-- Context 420000 (`MAX_MODEL_LEN`), KV pool 3.38M tokens, max 4 concurrent
+- Context **1000000** (`MAX_MODEL_LEN`), KV pool 6.04M tokens, max 4 concurrent.
+  (1M needs the padded slot-share patch — it is wired into the launcher.)
 - Recipe provenance: [MiaAI-Lab/GLM-5.3-Flash-EXL3-2x-DGX-Sparks](https://github.com/MiaAI-Lab/GLM-5.3-Flash-EXL3-2x-DGX-Sparks)
   (TP2 original — the overlay solves NoPE sparse-MLA on SM121, keeps experts
   packed trellis, and adds the DFlash2 hooks). Cloned at
@@ -155,9 +185,10 @@ context on port 18888.*
 |---|---:|---:|---:|---:|---:|---:|
 | SGLang NVFP4+DFlash2 (think on) | 53.5 | 88.3 | 82.7 | 34.1 | 90 | 262k |
 | EXL3 TP4 (think on) | 38.6 | 91.3 | 75.2 | 30.3 | — | 900k* |
-| **EXL3 TP4 (think off)** | **64.5** | **100.9** | 77.8 | 23.1 | **253** (4×63.3) | 420k live |
+| **EXL3 TP4 (think off)** | **64.5** | **100.9** | 77.8 | 23.1 | **253** (4×63.3) | 1M live |
 
-\* 900k boots fine; 420k is the deployed config. Math is within noise of
+\* 900k boots fine; the deployed config was 420k until the slot-share fix
+the same evening — now 1M. Math is within noise of
 sglang; prose is the accept-rate characteristic above, not a stack defect.
 
 ### Live dashboard record (2026-08-28)
