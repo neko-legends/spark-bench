@@ -187,6 +187,18 @@ context on port 18888.*
 | EXL3 TP4 (think on) | 38.6 | 91.3 | 75.2 | 30.3 | — | 900k* |
 | **EXL3 TP4 (think off)** | **64.5** | **100.9** | 77.8 | 23.1 | **253** (4×63.3) | 1M live |
 
+### Reederey87 kit adoptions (2026-08-29)
+
+Ported from the [Reederey87 production kit](https://github.com/Reederey87/glm53-flash-exl3-2x-dgx-spark) (same pinned image digest; A/B-gated fixes) plus MiaAI upstream PR #21:
+
+* **XGrammar termination backport** (vLLM #52805/#53046, `patch_xgrammar_termination.py`): fixes the `Failed to advance FSM` engine-error class that wedged structured traffic twice. Their gate: structured acceptance 0.98 -> 1.0000, +4% structured, +9% prose tok/s.
+* **`VLLM_PREFIX_CACHE_RETENTION_INTERVAL=0`** (their W3): sparse KDA retention — cross-session agent replays went 0% -> 97.8% cache hit on their rig. Directly relevant to EMW/eva-core session traffic.
+* **`LONG_PREFILL_TOKEN_THRESHOLD=1792`** (their W4): long cold prefills chunk-capped so a short request behind a 240k prefill gets first token in 7.9s instead of 256s. Complements (does not replace) `GLM53_MIXED_PREFILL_CHUNK=512` (that one guards decode-vs-prefill, this one guards prefill-vs-prefill head-of-line).
+* **`python3 -S` for the speculative-config JSON**: warm-restart stdout contamination fix.
+* Their W5 (k=8) was tested and reverted on a prose gate — independent validation of our k=7.
+
+Verified on our TP4 1M rig: all patches report applied at boot, KV pool byte-identical (6,039,334), single-stream ~93 tok/s usage-counted (450 tok / 4.86s), structured JSON probe clean, 0 FSM errors. Watch item: `MNBT` — they run 3584 (page-aligned), MiaAI main now recommends 2048; we stay at 1024 pending a bench-gated window.
+
 \* 900k boots fine; the deployed config was 420k until the slot-share fix
 the same evening — now 1M. Math is within noise of
 sglang; prose is the accept-rate characteristic above, not a stack defect.
