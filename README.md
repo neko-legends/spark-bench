@@ -213,8 +213,11 @@ Bench (same protocol, same day, both models):
 | Wall-clock speed | parity | parity |
 
 DFlash2 acceptance dips (drafter trained on base hidden states) but wall-clock is
-unchanged. The abliteration survives quantization: on a dual-use refusal probe
-(phishing sample for spam-filter testing), base refuses; the uncensored quant
+unchanged. Prefill: same kernels and TTFT parity on small prompts (0.23-0.43 s C1);
+bulk prefill not separately re-run — expect the base's measured ~915 tok/s cold
+on a 380k window and a clean reply, which is the same-path behavior. The
+abliteration survives quantization: on a dual-use refusal probe (phishing
+sample for spam-filter testing), base refuses; the uncensored quant
 complies. All standard capability checks pass.
 
 Serving: same launcher, one-line swap — `/home/jun/launch-glm53-uncens-exl3-tp4.sh`
