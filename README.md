@@ -187,6 +187,45 @@ context on port 18888.*
 | EXL3 TP4 (think on) | 38.6 | 91.3 | 75.2 | 30.3 | — | 900k* |
 | **EXL3 TP4 (think off)** | **64.5** | **100.9** | 77.8 | 23.1 | **253** (4×63.3) | 1M live |
 
+### Uncensored EXL3 — our own quant (2026-08-29)
+
+We quantized [orcarouter/GLM-5.3-Flash-Uncensored-FP8](https://huggingface.co/orcarouter/GLM-5.3-Flash-Uncensored-FP8)
+(their abliterated/uncensored FP8 of GLM-5.3-Flash) to EXL3 TR3 4bpw ourselves, on the
+same 4-Spark kit, and published it:
+**[neko-legends/GLM-5.3-Flash-Uncensored-EXL3](https://huggingface.co/neko-legends/GLM-5.3-Flash-Uncensored-EXL3)**.
+
+Recipe: brandonmusic's published R10 encoder closure drives the trellis encode; the
+`suh`/`svh`/`mcg` scale tensors are inherited per-tensor from the Mia-AiLab base EXL3
+checkpoint (reusing its calibrated scale search — the uncensored weights are a small
+perturbation of base); non-routed tensors are FP8→BF16 dequantized (official-source-
+native). Identity covariance this run; calibrated hessians are the v2 quality lever.
+Encode ran split across all 4 sparks in parallel: 37,152 expert tensors in 4h22m.
+Verification: 150,226/150,226 tensors, zero shape/dtype mismatches, ledger exact match,
+boots TP4 with KV pool 6.13M tokens @ 1M ctx.
+
+Bench (same protocol, same day, both models):
+
+| | Uncensored EXL3 | Base EXL3 |
+|---|---|---|
+| C1 code / structured / math / prose | 86 / 113 / 69 / 37 tok/s | 83 / 113 / 71 / 33 tok/s |
+| Single-stream ground truth (450 tok) | 4.64 s | 4.59 s |
+| DFlash2 acceptance (k=7) | ~48% | ~84% |
+| Wall-clock speed | parity | parity |
+
+DFlash2 acceptance dips (drafter trained on base hidden states) but wall-clock is
+unchanged. The abliteration survives quantization: on a dual-use refusal probe
+(phishing sample for spam-filter testing), base refuses; the uncensored quant
+complies. All standard capability checks pass.
+
+Serving: same launcher, one-line swap — `/home/jun/launch-glm53-uncens-exl3-tp4.sh`
+(served name `GLM-5.3-Flash-UNCENSORED-EXL3`, port 18888, TP4, 1M ctx).
+
+![uncensored EXL3 bench + behavior report](docs/images/glm-5-3-flash-uncensored-exl3-report-2026-08-29.webp)
+
+*The screenshot is the mission-complete report: quant config, bench table,
+DFlash2 acceptance, behavior discriminator, and the HF link — everything above
+in one frame.*
+
 ### Reederey87 kit adoptions (2026-08-29)
 
 Ported from the [Reederey87 production kit](https://github.com/Reederey87/glm53-flash-exl3-2x-dgx-spark) (same pinned image digest; A/B-gated fixes) plus MiaAI upstream PR #21:
