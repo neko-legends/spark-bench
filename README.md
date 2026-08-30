@@ -254,6 +254,16 @@ landed the same day:
 
 ![sparkDash live record: GLM-5.3-Flash-EXL3 at 119 gen tok/s](docs/images/glm-5-3-flash-exl3-dash-record-119-2026-08-28.webp)
 
+### Fleet overview, live (2026-08-29)
+
+The dash the day of the uncensored-quant build — all four sparks at TP4 serving
+GLM-5.3-Flash-EXL3, 109 gen tok/s under live load, decode record now **256.0**
+gen tok/s (up from 119 the day before — the xgrammar + sparse-retention fixes
+paying off), prefix cache 89.4%:
+
+![sparkDash overview: fleet serving 2026-08-29](docs/images/glm-5-3-flash-exl3-dash-live-2026-08-29.webp)
+
+
 **119 gen tok/s**, engine-log measured by the dash's trusted-throughput
 path (vLLM's own 10-second engine averages, not completion-dump counter
 spikes). This is an in-service aggregate — overlapping live requests —
