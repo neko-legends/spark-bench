@@ -56,8 +56,8 @@ Dated fixes that came out of this incident:
   drafter — they run hottest.
 - **Rolling per-request logs.** vLLM native: `--enable-log-requests
   --max-log-len 200` (request id, prompt length, sampling params, first 200
-  chars of prompt) plus docker `json-file` rotation 200 MB × 10 files per
-  rank, so it cannot fill a disk. `LOG_REQUESTS=0` disables.
+  chars of prompt) plus docker `json-file` rotation 25 MB × 4 files per
+  rank (~100 MB per rank — weeks of history, never a disk problem). `LOG_REQUESTS=0` disables.
 - **Crash evidence preserved.** The launcher preflight used to `docker rm -f`
   dead containers on every rank before launching — which silently deletes the
   traceback you need. It now snapshots the last 4,000 lines of each dead
