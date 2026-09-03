@@ -35,6 +35,46 @@ GLM-5.3-Flash (320B total / 18B active MoE), TP=4. Primary stack since
 The earlier SGLang NVFP4 lane is kept as a fallback and documented at the
 bottom of this section.
 
+### 2026-09-03 PM · Serving hardening: the silent OOM crash, and the fixes
+
+**If you only copy one thing from this entry: do not run this stack at
+`--gpu-memory-utilization 0.85`. Use 0.80.** After the E2 fat-expert kernels
+landed, 13.5 hours into an otherwise healthy serve the engine died with
+`TimeoutError: RPC call to sample_tokens timed out` → `EngineDeadError`.
+The real cause was upstream of the timeout: kernel logs on ranks 2/3 show
+`NVRM: Out of memory [NV_ERR_NO_MEMORY]` storms starting **30 minutes before
+the crash** (hundreds/minute), and ~1,100 more overnight while `/v1/models`
+looked healthy. The E2 fat-expert scratch buffers, CUDA graph pools, and NCCL
+buffers were never inside the 0.85 budget — the ranks had no headroom, and a
+large concurrent prefill tipped them over. At 0.80 the post-boot OOM counters
+sit at zero during serving (KV cache still 4.34M tokens — the trade is free).
+
+Dated fixes that came out of this incident:
+
+- **`GPU_MEM_UTIL` 0.85 → 0.80** (launcher default; env-overridable for
+  experiments). Ranks 2 and 3 hold the layer-split tail plus the DFlash2
+  drafter — they run hottest.
+- **Rolling per-request logs.** vLLM native: `--enable-log-requests
+  --max-log-len 200` (request id, prompt length, sampling params, first 200
+  chars of prompt) plus docker `json-file` rotation 200 MB × 10 files per
+  rank, so it cannot fill a disk. `LOG_REQUESTS=0` disables.
+- **Crash evidence preserved.** The launcher preflight used to `docker rm -f`
+  dead containers on every rank before launching — which silently deletes the
+  traceback you need. It now snapshots the last 4,000 lines of each dead
+  container to `~/glm-crash-logs/<ts>-<host>-glm53-exl3.log` (keeps 20) first.
+- **A watcher that watches the right signal.** `/v1/models` said "healthy"
+  through 1,100 driver OOMs. The watcher (`glm-cluster-watch.service`, script
+  in our ops repo) polls all four ranks' kernel logs every minute: ≥20
+  `NV_ERR_NO_MEMORY` in 2 min on any rank = alert, ~30 min before the engine
+  dies. Boot/warmup churn bursts are normal — there is a 10-min grace window
+  after each boot; the kill signal is a *sustained* storm during serving.
+  It also auto-relaunches once per hour if the API is down 3+ min with no
+  boot in progress.
+
+Lesson, generalized: **on a unified-memory box, "the API answers" is not
+"the ranks have memory."** Watch `dmesg`/`journalctl -k` for NVRM allocation
+failures on every rank, not just the head's HTTP 200.
+
 ### 2026-09-03 · Verified final config — "cycle C"
 
 Fresh boot, JIT cache warm, staged probes passed (2k and ~110k prefill), then
@@ -366,7 +406,8 @@ Current primary: **EXL3 TP4 + DFlash2 k=7 on vLLM**, image `local/glm53-exl3:e2`
   serving real traffic** (see the 2026-09-03 dead-ends table).
 - **Standing env (cycle C):** `ASYNC_SCHEDULING=1 DFLASH_TOKENS=7
   GLM53_MIXED_PREFILL_SMALL_OK=2048`. Launcher defaults: `MAX_MODEL_LEN=1000000`,
-  `GPU_MEM_UTIL=0.85`, `MAX_NUM_SEQS=4`, `MAX_NUM_BATCHED_TOKENS=7168`
+  `GPU_MEM_UTIL=0.80` (was 0.85 — see the 2026-09-03 PM crash note below),
+  `MAX_NUM_SEQS=4`, `MAX_NUM_BATCHED_TOKENS=7168`
   (never 8192 — indexer smem), `KV_CACHE_DTYPE=fp8`, `EXL3_FAT_KERNEL=1`,
   `GLM53_MIXED_PREFILL_CHUNK=skip`, `LONG_PREFILL_TOKEN_THRESHOLD=1792`,
   `VLLM_PREFIX_CACHE_RETENTION_INTERVAL=0`, `VLLM_EXECUTE_MODEL_TIMEOUT_SECONDS=1800`.
