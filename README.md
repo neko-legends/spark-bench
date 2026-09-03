@@ -1,5 +1,10 @@
 # spark-bench
 
+> ### 4 home boxes. 1M context. 320B-A18B MoE.
+> **📖 Reads 1,500 pages in 64 s** — cold prefill went **773 → 1560 tok/s (+102%)** in one day.
+> **⚡ Four concurrent users at 129 tok/s** (+19% today) · **96 tok/s single-stream** structured output · all on **4× DGX Spark** (~$4k of mini-PCs, not a datacenter).
+> **→ [Skip to the configs & numbers](#glm-5-3-flash)** — every setting below is copy-paste runnable, no gatekeeping.
+
 Running big MoE models across **four NVIDIA DGX Sparks** (GB10) as one TP=4
 world over a switched CX-7 RoCE fabric — the recipes, the launchers, the
 fabric runbook, and every benchmark we measured along the way, dated.
