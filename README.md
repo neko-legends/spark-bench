@@ -70,6 +70,39 @@ ASYNC_SCHEDULING=1 DFLASH_TOKENS=7 GLM53_MIXED_PREFILL_SMALL_OK=2048
 | `NCCL_ALGO=Ring NCCL_PROTO=LL128` | healthy in 720 s, unbenched (bench-driver bug). Only forced-NCCL variant that booted; tree is dead on this fabric |
 | Cold-JIT boot, 22:24 | E2 fat-expert precompute locked **all four ranks in lockstep at layers=1806 (96.1%)** during a ~300k prefill; 30 min silence; the head's 1800 s execute-timeout fired, clean exit. Did not reproduce on the JIT-warm boot. **Always JIT-warm a fresh image boot before serving.** |
 
+### What improved, in plain English
+
+What the day of tuning actually bought, vs this morning's baseline:
+
+- **Four people can use it at once, faster.** Four simultaneous streams now
+  write a combined **129 tok/s** where the same test measured **108** this
+  morning — like a checkout line that clears 19% quicker without adding lanes.
+- **Reading long documents got ~2× faster.** A 100k-token prompt (≈ a 150-page
+  book) is read in **64 seconds** — it was ~81 s this morning and ~129 s
+  before the E2 kernel landed. A 300k-token read (≈ 450 pages) takes
+  **~4 minutes**; before E2 it was 7 minutes.
+- **Structured output (JSON, code-ish text) is the fast lane:** up to
+  **~96 tok/s** on a single stream — the model drafts that kind of text almost
+  perfectly, so speculative decoding keeps nearly every guess. Prose is the
+  honest slow lane (~42–45) — the drafter guesses open text badly.
+- **Follow-up turns are cheap now.** With thinking toggled, the prefix cache
+  reuses **97%** of the read work, so a second question on the same document
+  starts writing almost immediately instead of re-reading everything.
+- **Nobody gets stuck behind a big read.** Two guards do this: long prefills
+  are chopped into ~1.8k chunks so a short question that arrives mid-read gets
+  its first word in seconds, and chat-sized messages are allowed to slip in
+  while a peer is still reading — that single change was worth **+7%** on the
+  4-stream number.
+- **More guesses per step (k=7).** Letting the drafter try 7 tokens instead of
+  5 added another **+8%** on the combined number, and the verified boot
+  (JIT warm) added the rest of the gap to 129.
+- **It stays up.** The night's crashes are documented above; the standing
+  config has a clean boot + full bench + probe pass behind it.
+
+One-line version: *the same four boxes now read long documents about twice as
+fast as they did in the morning and serve a group about 20% faster, and the
+config that does it is verified stable.*
+
 ### 2026-09-02 · E2 fat-expert prefill kernel — cold prefill ~2× at 300k
 
 Ported MiaAI's **E2 fat-expert prefill kernel** (their PR77, 2026-09-01:
