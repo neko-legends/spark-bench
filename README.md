@@ -78,9 +78,10 @@ What the day of tuning actually bought, vs this morning's baseline:
   write a combined **129 tok/s** where the same test measured **108** this
   morning — like a checkout line that clears 19% quicker without adding lanes.
 - **Reading long documents got ~2× faster.** A 100k-token prompt (≈ a 150-page
-  book) is read in **64 seconds** — it was ~81 s this morning and ~129 s
-  before the E2 kernel landed. A 300k-token read (≈ 450 pages) takes
-  **~4 minutes**; before E2 it was 7 minutes.
+  book) is read in **64 seconds (1560 tok/s)** — the pre-E2 morning baseline
+  measured 773 tok/s at 100k and 706 at 300k (see the chart's dated prefill
+  timeline: pre-E2 → +E2 kernel → A → C → verified). A 300k-token read
+  (≈ 450 pages) takes **~4 minutes**; before E2 it was 7 minutes.
 - **Structured output (JSON, code-ish text) is the fast lane:** up to
   **~96 tok/s** on a single stream — the model drafts that kind of text almost
   perfectly, so speculative decoding keeps nearly every guess. Prose is the
