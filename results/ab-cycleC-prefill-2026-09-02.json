@@ -1,0 +1,186 @@
+{
+  "served_model": "GLM-5.3-Flash-EXL3",
+  "max_model_len": 1000000,
+  "started_metrics": {
+    "num_requests_running": 0.0,
+    "prefix_cache_queries_total": 244152.0,
+    "prefix_cache_hits_total": 28672.0,
+    "prompt_tokens_total": 244152.0,
+    "local_compute": 215480.0,
+    "local_cache_hit": 28672.0
+  },
+  "ended_metrics": {
+    "num_requests_running": 0.0,
+    "prefix_cache_queries_total": 764851.0,
+    "prefix_cache_hits_total": 123648.0,
+    "prompt_tokens_total": 764851.0,
+    "local_compute": 641203.0,
+    "local_cache_hit": 123648.0
+  },
+  "results": [
+    {
+      "http": 200,
+      "error": null,
+      "finish_reason": "stop",
+      "prompt_tokens": 8002,
+      "completion_tokens": 2,
+      "cached_tokens": null,
+      "ttft_s": 5.380440532999273,
+      "wall_s": 5.380457445000502,
+      "prefill_tok_s": 1487.2388145398504,
+      "gen": "OK",
+      "reasoning": "",
+      "gen_ok": true,
+      "usage": {
+        "prompt_tokens": 8002,
+        "total_tokens": 8004,
+        "completion_tokens": 2
+      },
+      "name": "~8k",
+      "kind": "cold",
+      "target": 8000,
+      "filler_count": 7912,
+      "tokenize_est": 8001,
+      "salt": "COLD-PREFILL salt=09fa1a5c-33d2-4ed9-a5d1-ef99e29ab6b8 pad=b4f9aa9208b68b5db8247a07d2fd24bf286eabd0e7d2c4b2",
+      "metrics_delta": {
+        "prefix_cache_hits_total": 0.0,
+        "prefix_cache_queries_total": 8002.0,
+        "prompt_tokens_total": 8002.0,
+        "local_compute": 8002.0,
+        "local_cache_hit": 0.0
+      },
+      "gpu_cache_usage_perc": null
+    },
+    {
+      "http": 200,
+      "error": null,
+      "finish_reason": "stop",
+      "prompt_tokens": 8011,
+      "completion_tokens": 2,
+      "cached_tokens": null,
+      "ttft_s": 0.908087441999669,
+      "wall_s": 0.9081032019985287,
+      "prefill_tok_s": 8821.83766616048,
+      "gen": "OK",
+      "reasoning": "",
+      "gen_ok": true,
+      "usage": {
+        "prompt_tokens": 8011,
+        "total_tokens": 8013,
+        "completion_tokens": 2
+      },
+      "name": "~8k follow-up",
+      "kind": "apc",
+      "target": 8000,
+      "metrics_delta": {
+        "prefix_cache_hits_total": 7168.0,
+        "prefix_cache_queries_total": 8011.0,
+        "prompt_tokens_total": 8011.0,
+        "local_compute": 843.0,
+        "local_cache_hit": 7168.0
+      },
+      "gpu_cache_usage_perc": null,
+      "assistant_echo": "OK"
+    },
+    {
+      "http": 200,
+      "error": null,
+      "finish_reason": "stop",
+      "prompt_tokens": 16002,
+      "completion_tokens": 2,
+      "cached_tokens": null,
+      "ttft_s": 10.249117142000614,
+      "wall_s": 10.249134086001504,
+      "prefill_tok_s": 1561.3052108092534,
+      "gen": "OK",
+      "reasoning": "",
+      "gen_ok": true,
+      "usage": {
+        "prompt_tokens": 16002,
+        "total_tokens": 16004,
+        "completion_tokens": 2
+      },
+      "name": "~16k",
+      "kind": "cold",
+      "target": 16000,
+      "filler_count": 15917,
+      "tokenize_est": 16001,
+      "salt": "COLD-PREFILL salt=0c8ee960-22d9-476c-b2cd-489accf59510 pad=a0d53358fbbd9ec5b848528fa6cb223bc26f17efbd8a344a",
+      "metrics_delta": {
+        "prefix_cache_hits_total": 0.0,
+        "prefix_cache_queries_total": 16002.0,
+        "prompt_tokens_total": 16002.0,
+        "local_compute": 16002.0,
+        "local_cache_hit": 0.0
+      },
+      "gpu_cache_usage_perc": null
+    },
+    {
+      "http": 200,
+      "error": null,
+      "finish_reason": "stop",
+      "prompt_tokens": 100002,
+      "completion_tokens": 2,
+      "cached_tokens": null,
+      "ttft_s": 64.04044431500006,
+      "wall_s": 64.04046908300006,
+      "prefill_tok_s": 1561.544443822304,
+      "gen": "OK",
+      "reasoning": "",
+      "gen_ok": true,
+      "usage": {
+        "prompt_tokens": 100002,
+        "total_tokens": 100004,
+        "completion_tokens": 2
+      },
+      "name": "~100k",
+      "kind": "cold",
+      "target": 100000,
+      "filler_count": 99919,
+      "tokenize_est": 100001,
+      "salt": "COLD-PREFILL salt=3fc958a9-8aad-437b-ad16-f59c6c5baacd pad=145b408344565328f0642367a8ffc045ae5f71a8cdc2bc7d",
+      "metrics_delta": {
+        "prefix_cache_hits_total": 0.0,
+        "prefix_cache_queries_total": 100002.0,
+        "prompt_tokens_total": 100002.0,
+        "local_compute": 100002.0,
+        "local_cache_hit": 0.0
+      },
+      "gpu_cache_usage_perc": null
+    },
+    {
+      "http": 200,
+      "error": null,
+      "finish_reason": "stop",
+      "prompt_tokens": 300002,
+      "completion_tokens": 2,
+      "cached_tokens": null,
+      "ttft_s": 246.44873773399922,
+      "wall_s": 246.4487527580004,
+      "prefill_tok_s": 1217.2998034333723,
+      "gen": "OK",
+      "reasoning": "",
+      "gen_ok": true,
+      "usage": {
+        "prompt_tokens": 300002,
+        "total_tokens": 300004,
+        "completion_tokens": 2
+      },
+      "name": "~300k",
+      "kind": "cold",
+      "target": 300000,
+      "filler_count": 299916,
+      "tokenize_est": 300001,
+      "salt": "COLD-PREFILL salt=7258daca-3cd9-4b22-9a40-7f07d5ae51bc pad=375b7502234c377ffbae80b22654193002a4956885a02f68",
+      "metrics_delta": {
+        "prefix_cache_hits_total": 87808.0,
+        "prefix_cache_queries_total": 388682.0,
+        "prompt_tokens_total": 388682.0,
+        "local_compute": 300874.0,
+        "local_cache_hit": 87808.0
+      },
+      "gpu_cache_usage_perc": null
+    }
+  ],
+  "wall_clock": "2026-09-02 19:41:26 -0700"
+}

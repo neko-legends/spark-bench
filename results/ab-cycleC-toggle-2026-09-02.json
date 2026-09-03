@@ -1,0 +1,32 @@
+{
+ "c4_pass2": {
+  "aggregate_tok_s": 94.0,
+  "wall_s": 17.0,
+  "total_tokens": 1600,
+  "per_stream": [
+   26.8,
+   29.1,
+   33.1,
+   24.5
+  ]
+ },
+ "c4_pass3": {
+  "aggregate_tok_s": 98.9,
+  "wall_s": 16.2,
+  "total_tokens": 1600,
+  "per_stream": [
+   31.2,
+   25.5,
+   29.4,
+   31.1
+  ]
+ },
+ "thinking_toggle_prefix": {
+  "cold_hits": 0.0,
+  "cold_queries": 29682.0,
+  "toggle_hits": 28672.0,
+  "toggle_queries": 29696.0,
+  "toggle_hit_ratio": 0.966
+ },
+ "toggle_prompt_tokens": 29696.0
+}
