@@ -6,7 +6,7 @@
 # GID auto-detect (GID index differs per node on this fabric).
 set -uo pipefail
 
-IMAGE=local/glm53-exl3:e2
+IMAGE=${IMAGE:-local/glm53-exl3:e2}
 CONTAINER=glm53-exl3
 MODEL_HOST=/home/jun/models/glm-5.3-flash-exl3
 DFLASH_HOST=/home/jun/models/glm-5.3-flash-dflash2
@@ -29,13 +29,14 @@ MAX_NUM_SEQS=4
 MAX_NUM_BATCHED_TOKENS=7168
 KV_CACHE_DTYPE=fp8
 SPEC_METHOD=dflash
-DFLASH_TOKENS=7
+DFLASH_TOKENS=${DFLASH_TOKENS:-7}
 # Draft TP=1 on this 4-node kit (upstream TP2 kit uses 2). Do not inherit TP.
 DFLASH_DRAFT_TP=1
 DFLASH_MODEL_DIR=/models/dflash2
 MODEL_DIR=/models/exl3
 ENFORCE_EAGER=0
 EXL3_FUSED_MOE=1
+ASYNC_SCHEDULING=${ASYNC_SCHEDULING:-0}
 # E2 fat-expert kernel (implies BATCHED+SORTED). Needs overlay cubin; 0 = legacy path.
 EXL3_FAT_KERNEL=1
 EXL3_FAT_BATCHED=1
@@ -52,7 +53,9 @@ READY_TIMEOUT=3600
 # MiaAI 2026-08-28 fixes (recipe commits 3605217 / f3043c9 / a099743):
 GLM53_SUPPRESS_STOPS_IN_REASONING=1   # thinking-on CoT can restate harness stops; keep stops dormant until </think>
 # 2026-09-01 recipe: skip mixed sparse-MLA prefill while a peer decodes (was 512).
-GLM53_MIXED_PREFILL_CHUNK=skip
+GLM53_MIXED_PREFILL_CHUNK=${GLM53_MIXED_PREFILL_CHUNK:-skip}
+# neko 2026-09-02: chat-sized arrivals (<=N remaining prompt tokens) mix with a decoding peer
+GLM53_MIXED_PREFILL_SMALL_OK=${GLM53_MIXED_PREFILL_SMALL_OK:-0}
 VLLM_EXECUTE_MODEL_TIMEOUT_SECONDS=1800  # mid-serve Triton/TileLang JIT can exceed the 300s stock timeout
 GLM53_INDEXER_WORKSPACE=stock   # rightsize = ~+26% KV; untested on TP4
 GLM53_SPINWAIT_MS=16            # frozen sweep on upstream kit; stock = vLLM 1s
@@ -124,6 +127,7 @@ ARGS=(
     --no-enable-flashinfer-autotune
 )
 [ "${NODE_RANK}" != "0" ] && ARGS+=(--headless)
+[ "${ASYNC_SCHEDULING:-0}" = "1" ] && ARGS+=(--async-scheduling)
 [ "${ENFORCE_EAGER:-1}" = "1" ] && ARGS+=(--enforce-eager)
 [ -n "${QUANTIZATION:-}" ] && [ "${QUANTIZATION}" != "none" ] && ARGS+=(--quantization "${QUANTIZATION}")
 [ -n "${MAX_MODEL_LEN:-}" ] && ARGS+=(--max-model-len "${MAX_MODEL_LEN}")
@@ -170,7 +174,7 @@ fi
 [ -f /opt/glm53/patch_indexer_workspace.py ] && python3 /opt/glm53/patch_indexer_workspace.py || true
 [ -f /opt/glm53/patch_exl3_fat_kernel.py ] && python3 /opt/glm53/patch_exl3_fat_kernel.py || true
 [ -f /opt/glm53/patch_kpool_tail_slotmap.py ] && python3 /opt/glm53/patch_kpool_tail_slotmap.py || true
-say "ABLIT=${ABLIT:-0} quant=${QUANTIZATION} spec=${SPEC_METHOD} mmlen=${MAX_MODEL_LEN} mnbt=${MAX_NUM_BATCHED_TOKENS} fat=${EXL3_FAT_KERNEL:-0}"
+say "async=${ASYNC_SCHEDULING:-0} k=${DFLASH_TOKENS} small_ok=${GLM53_MIXED_PREFILL_SMALL_OK:-0} ABLIT=${ABLIT:-0} quant=${QUANTIZATION} spec=${SPEC_METHOD} mmlen=${MAX_MODEL_LEN} mnbt=${MAX_NUM_BATCHED_TOKENS} fat=${EXL3_FAT_KERNEL:-0}"
 say "launching: vllm serve ${MODEL_DIR} ${ARGS[*]}"
 exec vllm serve "${MODEL_DIR}" "${ARGS[@]}"
 INNER_EOF
@@ -240,6 +244,8 @@ docker run -d --name $CONTAINER \
   -e VLLM_NO_USAGE_STATS=1 -e DO_NOT_TRACK=1 \
   -e GLM53_SUPPRESS_STOPS_IN_REASONING=$GLM53_SUPPRESS_STOPS_IN_REASONING \
   -e GLM53_MIXED_PREFILL_CHUNK=$GLM53_MIXED_PREFILL_CHUNK \
+  -e GLM53_MIXED_PREFILL_SMALL_OK=$GLM53_MIXED_PREFILL_SMALL_OK \
+  -e ASYNC_SCHEDULING=$ASYNC_SCHEDULING \
   -e GLM53_INDEXER_WORKSPACE=$GLM53_INDEXER_WORKSPACE \
   -e GLM53_SPINWAIT_MS=$GLM53_SPINWAIT_MS \
   -e VLLM_PREFIX_CACHE_RETENTION_INTERVAL=$VLLM_PREFIX_CACHE_RETENTION_INTERVAL \
@@ -248,6 +254,7 @@ docker run -d --name $CONTAINER \
   -e NCCL_NET=IB -e NCCL_NET_PLUGIN=none -e NCCL_NVLS_ENABLE=0 \
   -e NCCL_CUMEM_ENABLE=0 -e NCCL_IB_MERGE_NICS=0 -e NCCL_CROSS_NIC=0 \
   -e NCCL_IGNORE_CPU_AFFINITY=1 -e NCCL_DEBUG=WARN \
+  ${NCCL_ALGO:+-e NCCL_ALGO=$NCCL_ALGO} ${NCCL_PROTO:+-e NCCL_PROTO=$NCCL_PROTO} \
   -e NCCL_SOCKET_IFNAME=enP2p1s0f1np1 -e GLOO_SOCKET_IFNAME=enP2p1s0f1np1 \
   -e NCCL_IB_HCA=roceP2p1s0f1 \
   --entrypoint bash $IMAGE /start.sh
