@@ -215,10 +215,23 @@ Note: vLLM reports ~977k as the observed max model length for the 1M config
 |---|---:|---:|---:|---:|---:|---:|
 | SGLang NVFP4+DFlash2 (think on) | 53.5 | 88.3 | 82.7 | 34.1 | 90 | 262k |
 | EXL3 TP4 (think on) | 38.6 | 91.3 | 75.2 | 30.3 | — | 900k |
-| **EXL3 TP4 (think off)** | **64.5** | **100.9** | 77.8 | 23.1 | **253** (4×63.3) | 1M |
+| EXL3 TP4 (think off, Aug 28 config) | 64.5 | 100.9 | 77.8 | 23.1 | 253† (4×63.3) | 1M |
 
 Math is within noise of SGLang; prose reflects DFlash2's accept rate on open
 text (~0.33), not a stack defect. At 420k with thinking on the same day:
+structured 93.7 / code 37.8 / math 74.5 / prose 36.2 — no regression vs the
+900k boot.
+
+† **C4 note (2026-09-03):** the Aug 28 serve measured 253 tok/s aggregate on
+4× code streams; the current full-patch serve measures 128.9 with the same
+harness. Single-stream C1 is at parity across both — the gap is specific to
+4-way concurrent decode, it appeared with the 09-02 full-patch serve (flagged
+in commit `f413842`), and the culprit among that day's changes (drafter-group,
+spinwait, decode-floor, MNBT 7168, async-scheduling, E2) has not been
+isolated. In exchange the current serve roughly **2×'d cold prefill** and
+gained the scheduler/robustness fixes; treated as an accepted trade for now.
+If 4-stream aggregate matters more one day, the isolation sweep is
+one-toggle-per-boot against the same C4 ruler. At 420k with thinking on the same day:
 structured 93.7 / code 37.8 / math 74.5 / prose 36.2 — no regression vs the
 900k boot.
 
