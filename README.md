@@ -245,6 +245,37 @@ Verified on our TP4 1M rig: all patches report applied at boot, KV pool byte-ide
 the same evening — now 1M. Math is within noise of
 sglang; prose is the accept-rate characteristic above, not a stack defect.
 
+### E2 fat-expert prefill kernel — TP4 cold prefill (2026-09-02)
+
+Ported MiaAI's **E2 fat-expert prefill kernel** (their PR77, 2026-09-01: purpose-built
+`exl3_fat_gemm` + scatter CUDA kernels for routed "fat" experts) into our TP4 image
+(`local/glm53-exl3:e2`) and benched cold prefill before/after on the same live serve
+(`GLM-5.3-Flash-EXL3`, TP4, 1M ctx, `forge:18888`). Harness:
+[`scripts/run_cold_prefill_18888.py`](scripts/run_cold_prefill_18888.py); raw JSON in
+[`results/cold-prefill-baseline-2026-09-02-pre-e2.json`](results/cold-prefill-baseline-2026-09-02-pre-e2.json)
+and [`results/cold-prefill-2026-09-02-post-e2.json`](results/cold-prefill-2026-09-02-post-e2.json).
+Boot logs confirm the kernel is genuinely active: `effective_tier=kernel`, 57 fat layers,
+0 legacy fallbacks.
+
+**Cold prefill, pre-E2 → post-E2 (our TP4 rig):**
+
+| prompt | before (TTFT / tok/s) | after (TTFT / tok/s) | gain |
+|---|---|---|---|
+| ~16k | 17.1 s / 934 | 13.1 s / 1222 | +31% |
+| ~100k | 129 s / 773 | 90 s / 1110 | +44% |
+| ~300k | 425 s / 706 | **220 s / 1366** | **+94%** |
+
+At long context this nearly doubles our cold prefill and beats MiaAI's published TP2
+numbers (~1200 tok/s at 100–300k) — on 2× the nodes but with 1M ctx live. The ~8k rung
+is JIT-warmup noise and is not compared. Abliteration caveat: benched on the base EXL3
+serve; the uncensored quant shares the same kernels and architecture, so treat these as
+the expected numbers for it too (decode was already at parity).
+
+![chat benchmark report: cold prefill pre-E2 vs post-E2 on our TP4 GLM 5.3 Flash](docs/images/glm-5-3-flash-e2-prefill-bench-2026-09-02.webp)
+
+*Screenshot of the post-E2 bench report, 2026-09-02. Benchmark data and the E2 kernel
+are MiaAI's (PR77); TP4 port, harness, and measurements ours.*
+
 ### Live dashboard record (2026-08-28)
 
 The dash (eva:5555) tracks decode high-water marks per model — a model
