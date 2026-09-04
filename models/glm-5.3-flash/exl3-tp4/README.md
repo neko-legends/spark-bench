@@ -8,8 +8,14 @@ at runtime.
 - `launch-glm53-exl3-tp4.sh` — base checkpoint (`Mia-AiLab/GLM-5.3-Flash-EXL3-TR3-4bpw`)
 - `launch-glm53-uncens-exl3-tp4.sh` — our uncensored quant (`neko-legends/GLM-5.3-Flash-Uncensored-EXL3`)
 
-State as of 2026-09-02: E2 fat-expert kernel, MNBT 7168, spinwait 16 ms, PR63 chat
-template, mixed-prefill `skip`, 1M ctx, DFlash2 k=7 draft-TP1. Bench archive in
+State as of 2026-09-04: E2 fat-expert kernel, MNBT 7168, spinwait 16 ms,
+mixed-prefill `skip`, 1M ctx, DFlash2 k=7 draft-TP1. Chat template (2026-09-04):
+upstream GLM-5.3-Flash template of 2026-09-04 (tool-result early-exit reorder)
+with the `enable_thinking` switch grafted back — upstream removed it, our lanes
+depend on it. Lives in `overlay/chat_template.jinja`; upstream-verbatim copy at
+`overlay/chat_template_upstream-2026-09-04.jinja`; rollback
+`TEMPLATE_VARIANT=legacy` falls back to the image-baked template. Details and
+verification notes in the main README entry of the same date. Bench archive in
 `../../../results/` and harnesses in `../../../scripts/`.
 
 ## For external users: what you build vs. what you just download
