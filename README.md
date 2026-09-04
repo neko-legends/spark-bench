@@ -35,6 +35,30 @@ GLM-5.3-Flash (320B total / 18B active MoE), TP=4. Primary stack since
 The earlier SGLang NVFP4 lane is kept as a fallback and documented at the
 bottom of this section.
 
+### 2026-09-04 · Upstream chat-template update adopted (tool-result reorder fix)
+
+zai-org updated the GLM-5.3 / GLM-5.3-Flash chat templates (tool-result
+reordering exits early instead of scanning every block — a real win for long
+tool-loop contexts). Adopted for the EXL3 TP4 serve with **one deliberate
+local delta**: upstream dropped the `enable_thinking` switch (the new template
+always opens `<think>`); our lanes and benches depend on
+`chat_template_kwargs: {"enable_thinking": false}`, so we grafted the switch
+back. Deployment template: `~/glm53-exl3-recipe/overlay/chat_template.jinja`
+(upstream-verbatim kept alongside as `chat_template_upstream-2026-09-04.jinja`
+for diffing). Rollback: `TEMPLATE_VARIANT=legacy` uses the image-baked one.
+
+Other upstream deltas to know: every prompt now carries a
+`<|system|>Reasoning Effort: Max` line (invalidates old prefix caches —
+catch-up re-prefills naturally), and multimodal content gets a polite
+"cannot process" reminder instead of image tokens (irrelevant on this
+text-only lane).
+
+Verified on the live cluster before adopting: thinking off → 3-token clean
+answer, zero reasoning; thinking on → real reasoning; tool-call and
+out-of-order tool-result renders correct (reordered to call order); xgrammar
+structured output valid. Decode bench at parity: structured 92.8/96.9,
+math 67.6/72.6 (up from 55.5/60.1), code 54.2/57.4, prose 43.7/43.9.
+
 ### 2026-09-03 PM · Serving hardening: the silent OOM crash, and the fixes
 
 **If you only copy one thing from this entry: do not run this stack at
