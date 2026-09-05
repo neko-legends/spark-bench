@@ -99,6 +99,7 @@ is the supported target; **1M YaRN is not our production default**.
 
 [Qwen model guide](models/qwen-3.8-flash-next/README.md)
 · [Full configuration, image identity, patches and methodology](models/qwen-3.8-flash-next/nvfp4-tp4/README.md)
+· Published image: `docker pull ghcr.io/neko-legends/qwen38-flash-next-nvfp4-gb10:e1`
 · [Recorded benchmark summary](results/qwen38-nvfp4-tp4-2026-09-05.json)
 · [Resident-lane retrieval smoke output](results/qwen38-resident-niah-smoke-2026-09-05.jsonl)
 

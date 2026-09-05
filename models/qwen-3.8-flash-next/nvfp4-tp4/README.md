@@ -16,6 +16,17 @@ report, not a completed production qualification; long-run stability is not yet 
 - Fanout checks matched file counts and total bytes on all ranks. **This was not a cryptographic file-content verification.**
 - Base image: `vllm/vllm-openai:qwen38-flash-next@sha256:fc120ece0a388cc0aa1caad4a9f1cd92113484ab7ec2fd0efadd62585be05bf8`.
 - Patched local image: `local/qwen38-gb10:e1`.
+- **Published image:** `ghcr.io/neko-legends/qwen38-flash-next-nvfp4-gb10:e1`
+  (manifest digest `sha256:8b597b4e39c31f57615133a7eb1133238d22ce2f0dcef305bd28418ac55f0b9f`,
+  pushed 2026-09-05). Pull with:
+
+  ```bash
+  docker pull ghcr.io/neko-legends/qwen38-flash-next-nvfp4-gb10:e1
+  ```
+
+  Verify the digest matches before launch. This image predates the
+  `THINKING_DEFAULT=off` chat-template overlay (spark-bench `5d6f0a5`) — that
+  overlay is applied by the launcher at boot, not baked into the image.
 - Built image **ID** (not a published registry manifest digest): `sha256:6fc66a65645c6d3099aba31231cc005a5074608f1f572399e98f5dfa6a6d0407`.
 - Built once on Forge; docker save/load over CX7; identical image ID checked on all ranks.
 - Installed vLLM identifies as `0.1.dev20073+g8e685d198`.
