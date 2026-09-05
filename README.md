@@ -78,6 +78,18 @@ The earlier claim that mmap adds 0.4–1.3 seconds to *every decode step* was no
 established by the logs (they also included long-prefill traffic). Keep mmap as
 a capacity-oriented alternative, not a universal dead end.
 
+### Real-work validation: agent worker tasks (2026-09-05)
+
+![Five agent worker tasks (Builder, Reviewer, Synthesis, IF, Batch) across GLM 5.3 cloud, Qwen 3.8 cloud, and Qwen 3.8 NVFP4 on 4× Sparks: local matches or beats cloud quality on all five tasks while cutting latency up to 29× — Builder 12s vs 344s cloud, Reviewer 4.1s vs 50s, Synthesis 57s vs 355s, IF 9.5s vs 36s; the one regression is Batch classification, 12s local vs ~5s cloud.](docs/images/qwen38-sparks-role-bench-2026-09-05.webp)
+
+The point of the cluster: not synthetic decode speed, but doing the work this
+household's agents actually do. Same fixtures, same judge across all columns;
+the Sparks column ran with thinking off. Local holds **quality parity or better
+on all five tasks** (Builder 0.99, Reviewer/IF/Batch 1.00, Synthesis 0.96) at
+**zero marginal inference cost**, with latency wins up to ~29× on the heavy
+tasks. Honest caveat: batch classification is *slower* locally (12s vs ~5s
+cloud) — small-prompt traffic doesn't amortize the TP4 collective overhead.
+
 ### Configuration, validation and references
 
 Current launch settings: **resident PLE, FULL_DECODE_ONLY**, graph capture sizes
