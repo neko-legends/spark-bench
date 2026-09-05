@@ -28,6 +28,29 @@ chronological order. Every number carries its date, its ruler, and its config.
 
 <a id="glm-5-3-flash"></a>
 
+## Qwen 3.8 Flash Next (NVFP4) — 4× DGX Spark
+
+nvidia/Qwen3.8-Flash-Next-NVFP4 (official NVIDIA checkpoint), vLLM TP4 + expert-parallel,
+one endpoint on `forge:8000`. Image: `vllm/vllm-openai:qwen38-flash-next` (digest
+`fc120ece`) + 11-patch GB10 stack (`artifacts/qwen38-nvfp4-20260905/`, launcher +
+Dockerfile + patch provenance). First served 2026-09-05.
+
+| Metric | tsw2k published (same hw) | Ours 2026-09-05 |
+|---|---:|---:|
+| KV pool (bf16) | 4.70M tok | **5.06M tok** (19.3× 262k) |
+| Aggregate decode @4 | 53 | **105.5 tok/s** |
+| Aggregate decode @8 | 97 | **210.6 tok/s** |
+| Aggregate decode @16 | 157 | **344.0 tok/s** |
+| MTP k=2 acceptance | 0.856 | **0.944** |
+| Single-stream decode | 31.0 | 26.3 code / 24.8 prose |
+| Gates | — | greedy byte-identical ×3 PASS, tool-call PASS |
+
+Config: 262k native ctx, seqs 16, MNBT 8192, GPU mem 0.80, MTP k=2, PIECEWISE
+cudagraphs, PLE n-gram table mmap'd from NVMe (why KV pool beats reference).
+Known gap: SS 26-27 vs published 31 — FULL_DECODE_ONLY graph lane requires
+resident PLE; untested. Raw: [`results/qwen38-nvfp4-tp4-2026-09-05.json`](results/qwen38-nvfp4-tp4-2026-09-05.json).
+NIAH and SGLang comparison pending. 1M YaRN lane deliberately off (known wedge).
+
 ## GLM 5.3 Flash — 4× DGX Spark
 
 GLM-5.3-Flash (320B total / 18B active MoE), TP=4. Primary stack since

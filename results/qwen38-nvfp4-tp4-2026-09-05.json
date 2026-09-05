@@ -1,0 +1,20 @@
+{
+ "date": "2026-09-05",
+ "model": "nvidia/Qwen3.8-Flash-Next-NVFP4 (official nvidia checkpoint, 132.7GB, sha fab0aecb760c)",
+ "engine": "vLLM 0.1.dev20073+g8e685d198 (vllm/vllm-openai:qwen38-flash-next digest fc120ece) + GB10 patch stack (image local/qwen38-gb10:e1, id 6fc66a65645c, identical on all 4 ranks)",
+ "topology": "TP4 + expert-parallel, 4x DGX Spark GB10, CX7 RoCE rail B (192.168.10.0/24), NCCL 2.30.7 host-staged",
+ "config": {"max_model_len": 262144, "max_num_seqs": 16, "max_num_batched_tokens": 8192, "gpu_memory_utilization": 0.80, "kv_cache_dtype": "auto (bf16)", "mtp_tokens": 2, "cudagraph": "PIECEWISE", "ple_mode": "mmap (NVMe, 32 workers, prewarm)", "moe_backend": "stock (flashinfer_cutlass)", "prefix_caching": true, "chunked_prefill": true},
+ "kv_pool_tokens": 5055959,
+ "kv_pool_full_contexts": 19.29,
+ "mtp_acceptance": 0.944,
+ "gates": {"greedy_identity_x3": "PASS (2 probes, sha-verified)", "tool_call": "PASS (get_weather, clean args)"},
+ "decode_tok_s": {
+   "single_stream": {"code": 26.3, "prose": 24.8, "note": "gate script ran thinking-on; agg lanes below are thinking-off"},
+   "aggregate_e2e": {"x4": 105.5, "x8": 210.6, "x16": 344.0},
+   "per_stream_x4": [26.7, 27.1, 27.2, 27.2],
+   "per_stream_x16_mean": 22.5,
+   "method": "usage-verified completion tokens / end-to-end wall, temp 0, 1200-token code streams, thinking off, nonce-suffixed prompts"
+ },
+ "reference_tsw2k_published": {"ss": 31.0, "agg_x4": 53, "agg_x8": 97, "agg_x16": 157, "mtp_accept": 0.856, "kv_pool": 4696556},
+ "notes": ["PIECEWISE cudagraph lane (PLE mmap forbids FULL_DECODE_ONLY capture); FULL lane needs PLE_MODE=resident", "NIAH 4k/32k/128k not yet run", "1M YaRN lane not enabled (known wedge >100k, vllm#54629)"]
+}
