@@ -31,6 +31,13 @@ chronological order. Every number carries its date, its ruler, and its config.
 
 ## Qwen 3.8 Flash Next (NVFP4) — 4× DGX Spark
 
+![Qwen 3.8 Flash Next on four DGX Sparks: resident PLE with FULL_DECODE_ONLY; 70.0 tok/s single-stream code, 51.4 tok/s single-stream prose, and 510.6 tok/s aggregate at 16 streams.](docs/images/qwen38-resident-ple-benchmark-2026-09-05.webp)
+
+*2026-09-05 benchmark overview. The graphic's mmap and external-reference comparisons
+are not controlled comparisons; thinking modes differ in the mmap C1 comparison,
+and the claimed mmap “gather tax” was not isolated. See the measurements and
+limitations below.*
+
 [nvidia/Qwen3.8-Flash-Next-NVFP4](https://huggingface.co/nvidia/Qwen3.8-Flash-Next-NVFP4),
 the official NVIDIA checkpoint, first served **2026-09-05**. One vLLM endpoint
 at `forge:8000`, **TP4 + expert parallel**, one NVMe checkpoint copy per node,
