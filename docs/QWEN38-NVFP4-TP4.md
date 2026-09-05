@@ -5,7 +5,8 @@
 Current endpoint: `http://forge:8000/v1`, served ID `qwen3.8-flash-next`.
 Four GB10 nodes, TP4 **plus expert parallel**, one endpoint. The GLM and
 DeepSeek recipes remain separate archived lanes; they are not running alongside Qwen.
-This is a first benchmark report, not a completed production qualification.
+**Status: serving, with stability testing in progress.** This is a first benchmark
+report, not a completed production qualification; long-run stability is not yet established.
 
 ## Weights and image identity
 

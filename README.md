@@ -13,7 +13,7 @@ Three model lanes, kept separate (they share the hardware; they are not simultan
 
 | Lane | Stack | Status | Headline (this cluster) |
 |---|---|---|---|
-| **[Qwen 3.8 Flash Next](#qwen-3-8-flash)** | vLLM · official NVIDIA NVFP4 · TP4+EP · MTP k=2 · 262k ctx | **serving now** (`forge:8000`) | 70.0 tok/s C1 code · 510.6 tok/s aggregate @16 · 4.02M-token KV pool; preliminary |
+| **[Qwen 3.8 Flash Next](#qwen-3-8-flash)** | vLLM · official NVIDIA NVFP4 · TP4+EP · MTP k=2 · 262k ctx | **serving · stability testing in progress** (`forge:8000`) | 70.0 tok/s C1 code · 510.6 tok/s aggregate @16 · 4.02M-token KV pool; preliminary |
 | **[GLM 5.3 Flash](#glm-5-3-flash)** | vLLM · EXL3 4bpw · DFlash2 · 1M ctx | stopped; recipe and results retained | 128.9 tok/s 4-stream agg · 1560 tok/s cold prefill @100k · 96 tok/s structured C1 |
 | **[DeepSeek V4 Flash](#deepseek-v4-flash)** | vLLM · abliterated NVFP4 · MTP | recipe kept, not serving | 136 tok/s C1 median (145.5 peak) · 290.3 engine record · 182 tok/s C4 |
 
@@ -42,6 +42,9 @@ limitations below.*
 the official NVIDIA checkpoint, first served **2026-09-05**. One vLLM endpoint
 at `forge:8000`, **TP4 + expert parallel**, one NVMe checkpoint copy per node,
 CX-7 RoCE between all four GB10s. No checkpoint conversion or TP2 pairs.
+
+**Status: serving, with stability testing in progress.** The benchmarks below
+are preliminary; long-run stability and production qualification are not yet established.
 
 ### Tested configurations and measurements
 
