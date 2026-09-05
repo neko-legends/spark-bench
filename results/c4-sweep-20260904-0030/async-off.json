@@ -1,0 +1,30 @@
+{
+ "per_stream_tok_s": [
+  35.0,
+  29.0,
+  31.7,
+  31.7
+ ],
+ "client_wall_agg_tok_s": 115.0,
+ "server_gen_rate_tok_s": 115.0,
+ "tokens": 6400,
+ "window_s": 55.6,
+ "config": "async-off",
+ "env": "ASYNC_SCHEDULING=0",
+ "status": "ok",
+ "boot_s": 716,
+ "oom_5min_before": [
+  "186",
+  "187",
+  "134",
+  "207"
+ ],
+ "oom_5min_after": [
+  "0",
+  "0",
+  "0",
+  "0"
+ ],
+ "ruler": "bench_c4_steady.py (4\u00d71600 code, thinking off)",
+ "date": "2026-09-04T01:04:41-07:00"
+}

@@ -1,0 +1,12 @@
+{
+ "per_stream_tok_s": [
+  30.7,
+  30.4,
+  31.8,
+  30.5
+ ],
+ "client_wall_agg_tok_s": 119.6,
+ "server_gen_rate_tok_s": 119.6,
+ "tokens": 6400,
+ "window_s": 53.5
+}

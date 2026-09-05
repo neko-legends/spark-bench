@@ -1,0 +1,30 @@
+{
+ "per_stream_tok_s": [
+  35.3,
+  35.1,
+  34.1,
+  34.0
+ ],
+ "client_wall_agg_tok_s": 134.4,
+ "server_gen_rate_tok_s": 134.4,
+ "tokens": 6400,
+ "window_s": 47.6,
+ "config": "no-drafter-group",
+ "env": "SKIP_PATCHES=patch_glm5_drafter_group.py",
+ "status": "ok",
+ "boot_s": 919,
+ "oom_5min_before": [
+  "0",
+  "0",
+  "0",
+  "0"
+ ],
+ "oom_5min_after": [
+  "0",
+  "0",
+  "0",
+  "0"
+ ],
+ "ruler": "bench_c4_steady.py (4\u00d71600 code, thinking off)",
+ "date": "2026-09-04T01:49:08-07:00"
+}

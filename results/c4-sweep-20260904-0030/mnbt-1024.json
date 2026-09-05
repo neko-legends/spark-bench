@@ -1,0 +1,30 @@
+{
+ "per_stream_tok_s": [
+  30.7,
+  30.4,
+  31.8,
+  30.5
+ ],
+ "client_wall_agg_tok_s": 119.6,
+ "server_gen_rate_tok_s": 119.6,
+ "tokens": 6400,
+ "window_s": 53.5,
+ "config": "mnbt-1024",
+ "env": "MAX_NUM_BATCHED_TOKENS=1024",
+ "status": "ok",
+ "boot_s": 1255,
+ "oom_5min_before": [
+  "0",
+  "0",
+  "0",
+  "0"
+ ],
+ "oom_5min_after": [
+  "0",
+  "0",
+  "0",
+  "0"
+ ],
+ "ruler": "bench_c4_steady.py (4\u00d71600 code, thinking off)",
+ "date": "2026-09-04T01:29:47-07:00"
+}

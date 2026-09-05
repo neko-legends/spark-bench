@@ -1,0 +1,30 @@
+{
+ "per_stream_tok_s": [
+  36.8,
+  35.1,
+  34.8,
+  34.3
+ ],
+ "client_wall_agg_tok_s": 135.8,
+ "server_gen_rate_tok_s": 135.8,
+ "tokens": 6400,
+ "window_s": 47.1,
+ "config": "no-decode-floor",
+ "env": "SKIP_PATCHES=patch_scheduler_decode_floor.py",
+ "status": "ok",
+ "boot_s": 1195,
+ "oom_5min_before": [
+  "58",
+  "0",
+  "96",
+  "0"
+ ],
+ "oom_5min_after": [
+  "0",
+  "0",
+  "0",
+  "0"
+ ],
+ "ruler": "bench_c4_steady.py (4\u00d71600 code, thinking off)",
+ "date": "2026-09-04T02:28:41-07:00"
+}

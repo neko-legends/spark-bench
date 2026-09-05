@@ -1,0 +1,30 @@
+{
+ "per_stream_tok_s": [
+  33.4,
+  35.8,
+  33.9,
+  33.4
+ ],
+ "client_wall_agg_tok_s": 131.8,
+ "server_gen_rate_tok_s": 131.8,
+ "tokens": 6400,
+ "window_s": 48.6,
+ "config": "no-spinwait",
+ "env": "SKIP_PATCHES=patch_spinwait.py",
+ "status": "ok",
+ "boot_s": 688,
+ "oom_5min_before": [
+  "113",
+  "89",
+  "31",
+  "0"
+ ],
+ "oom_5min_after": [
+  "0",
+  "0",
+  "0",
+  "0"
+ ],
+ "ruler": "bench_c4_steady.py (4\u00d71600 code, thinking off)",
+ "date": "2026-09-04T02:04:40-07:00"
+}
