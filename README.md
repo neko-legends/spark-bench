@@ -38,18 +38,22 @@ Dockerfile + patch provenance). First served 2026-09-05.
 | Metric | tsw2k published (same hw) | Ours 2026-09-05 |
 |---|---:|---:|
 | KV pool (bf16) | 4.70M tok | **5.06M tok** (19.3× 262k) |
-| Aggregate decode @4 | 53 | **105.5 tok/s** |
-| Aggregate decode @8 | 97 | **210.6 tok/s** |
-| Aggregate decode @16 | 157 | **344.0 tok/s** |
-| MTP k=2 acceptance | 0.856 | **0.944** |
-| Single-stream decode | 31.0 | 26.3 code / 24.8 prose |
+| Aggregate decode @4 | 53 | **191.5 tok/s** |
+| Aggregate decode @8 | 97 | **334.1 tok/s** |
+| Aggregate decode @16 | 157 | **510.6 tok/s** |
+| MTP k=2 acceptance | 0.856 | **0.912** |
+| Single-stream decode | 31.0 | **70.0 code / 51.4 prose** |
 | Gates | — | greedy byte-identical ×3 PASS, tool-call PASS |
 
-Config: 262k native ctx, seqs 16, MNBT 8192, GPU mem 0.80, MTP k=2, PIECEWISE
-cudagraphs, PLE n-gram table mmap'd from NVMe (why KV pool beats reference).
-Known gap: SS 26-27 vs published 31 — FULL_DECODE_ONLY graph lane requires
-resident PLE; untested. Raw: [`results/qwen38-nvfp4-tp4-2026-09-05.json`](results/qwen38-nvfp4-tp4-2026-09-05.json).
-NIAH and SGLang comparison pending. 1M YaRN lane deliberately off (known wedge).
+**Standing config (2026-09-05 PM): PLE resident + FULL_DECODE_ONLY cudagraphs,
+GPU mem 0.78.** The mmap-PLE + PIECEWISE lane (first boot) is a measured dead
+end: PLE NVMe gathers add 0.4-1.3 s per decode step — 26.3 SS / 344 agg@16 vs
+70.0 / 510.6 resident. Its only win was KV pool (5.06M vs 4.02M; both ample).
+SGLang lane researched and rejected: TP4 hard-blocked on GB10 (SM121 QSA kernel
+supports TP1/TP2 head topologies only); 2×TP2 projected SS ~40 / agg ~300@16
+loses on both axes; FP8_BLOCK_SCALES MTP gap + open uptime-decay bug.
+Raw: [`results/qwen38-nvfp4-tp4-2026-09-05.json`](results/qwen38-nvfp4-tp4-2026-09-05.json).
+NIAH pending. 1M YaRN lane deliberately off (known wedge).
 
 ## GLM 5.3 Flash — 4× DGX Spark
 
