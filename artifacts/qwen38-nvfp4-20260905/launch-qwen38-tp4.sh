@@ -67,9 +67,12 @@ MAX_NUM_SEQS=${MAX_NUM_SEQS:-16}
 # Thinking default (2026-09-05, Eva). The stock chat template treats a missing
 # enable_thinking as TRUE with reasoning_effort=xhigh; role bench measured it
 # burning the full 16k max_tokens on reasoning and emitting zero content on
-# builder tasks (finish_reason=length). Workers/routers must not have to
-# remember a kwarg, so the served template is patched to default OFF. Callers
-# that want reasoning opt in with chat_template_kwargs.enable_thinking=true.
+# builder tasks (finish_reason=length). Fixed with vLLM's own
+# --default-chat-template-kwargs, which feeds BOTH the template renderer and
+# the qwen3 reasoning parser (a template-only overlay was tried first: the
+# model stopped thinking but the parser still assumed REASONING state and
+# filed the answer under message.reasoning — half a fix). Request-level
+# chat_template_kwargs.enable_thinking=true still opts in per call.
 THINKING_DEFAULT=${THINKING_DEFAULT:-off}   # off|on
 MAX_NUM_BATCHED_TOKENS=${MAX_NUM_BATCHED_TOKENS:-8192}  # tsw2k: use 2048 for deep (>32k) prompts
 MTP_TOKENS=${MTP_TOKENS:-2}
@@ -237,23 +240,15 @@ if [ -n "$PATCHED" ]; then
   [ -f "$CFG_STAGE_HOST/hf_quant_config_patched.json" ] && cp "$CFG_STAGE_HOST/hf_quant_config_patched.json" "$CFG_STAGE_HOST/hf_quant_config.json"
   CFG_MOUNTS="-v $CFG_STAGE_HOST/config.json:$MODEL_DIR/config.json:ro"
   [ -f "$CFG_STAGE_HOST/hf_quant_config.json" ] && CFG_MOUNTS="$CFG_MOUNTS -v $CFG_STAGE_HOST/hf_quant_config.json:$MODEL_DIR/hf_quant_config.json:ro"
-  # chat template: default thinking OFF (see THINKING_DEFAULT above). Same
-  # overlay mechanism — the NVMe template is never modified.
-  if [ "$THINKING_DEFAULT" = "off" ] && [ -f "$MODEL_HOST/chat_template.jinja" ]; then
-    python3 "$PATCHES_DIR/patch_chat_template_thinking.py" "$MODEL_HOST/chat_template.jinja" "$CFG_STAGE_HOST/chat_template.jinja" || {
-      say "FATAL: chat_template thinking-default patch failed"; exit 1; }
-    CFG_MOUNTS="$CFG_MOUNTS -v $CFG_STAGE_HOST/chat_template.jinja:$MODEL_DIR/chat_template.jinja:ro"
-    say "chat template: enable_thinking defaults OFF (opt in per request with chat_template_kwargs.enable_thinking=true)"
-  fi
   # stream to every worker node (forge is rank 0/local and uses the stage dir directly)
   for i in "${!SSH_HOSTS[@]}"; do
     h="${SSH_HOSTS[$i]}"; [ "$h" = local ] && continue
-    for f in config.json hf_quant_config.json chat_template.jinja; do
+    for f in config.json hf_quant_config.json; do
       [ -f "$CFG_STAGE_HOST/$f" ] || continue
       cat "$CFG_STAGE_HOST/$f" | ssh -o BatchMode=yes "$h" "mkdir -p $CFG_STAGE_HOST && cat > $CFG_STAGE_HOST/$f"
     done
   done
-  say "config alias staged on all nodes: $CFG_STAGE_HOST (bind-mounted over $MODEL_DIR/*.json + chat_template.jinja)"
+  say "config alias staged on all nodes: $CFG_STAGE_HOST (bind-mounted over $MODEL_DIR/*.json)"
 else
   say "MTP layer-index alias: checkpoint already declares absolute MTP indices (no overlay)"
 fi
@@ -324,6 +319,12 @@ if [ -n "${MOE_BACKEND:-}" ] && [ "${MOE_BACKEND}" != "stock" ]; then
     ARGS+=(--moe-backend "${MOE_BACKEND}")
 fi
 
+# Thinking default OFF at the serving layer (see THINKING_DEFAULT in the outer
+# launcher). One array element so the JSON is never word-split.
+if [ "${THINKING_DEFAULT:-off}" = "off" ]; then
+    ARGS+=(--default-chat-template-kwargs '{"enable_thinking": false}')
+fi
+
 if [ -n "${EXTRA_ARGS:-}" ]; then
     EXTRA=(${EXTRA_ARGS})
     ARGS+=("${EXTRA[@]}")
@@ -381,6 +382,7 @@ docker run -d --name $CONTAINER --restart no \
   -e MAX_MODEL_LEN=$MAX_MODEL_LEN -e GPU_MEM_UTIL=$GPU_MEM_UTIL \
   -e MAX_NUM_SEQS=$MAX_NUM_SEQS -e MAX_NUM_BATCHED_TOKENS=$MAX_NUM_BATCHED_TOKENS \
   -e KV_CACHE_DTYPE=$KV_CACHE_DTYPE -e MTP_TOKENS=$MTP_TOKENS \
+  -e THINKING_DEFAULT=$THINKING_DEFAULT \
   -e CUDAGRAPH_MODE=$CUDAGRAPH_MODE -e MOE_BACKEND="${MOE_BACKEND}" \
   -e PLE_MODE=$PLE_MODE \
   -e SPLIT_OPS=${SPLIT@Q} \
