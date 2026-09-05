@@ -9,7 +9,9 @@ Running big MoE models across **four NVIDIA DGX Sparks** (GB10) as one TP=4
 world over a switched CX-7 RoCE fabric — the recipes, the launchers, the
 fabric runbook, and every benchmark we measured along the way, dated.
 
-Three model lanes, kept separate (they share the hardware; they are not simultaneous deployments):
+Three model lanes, kept separate (they share the hardware; they are not simultaneous deployments).
+**[Model directory: start here](models/README.md)** — per-model entry points,
+prerequisites, reproduction limits and operator/agent handoff instructions:
 
 | Lane | Stack | Status | Headline (this cluster) |
 |---|---|---|---|
@@ -95,7 +97,8 @@ is the supported target; **1M YaRN is not our production default**.
   external TP2 measurements are not a measured engine comparison or a universal
   claim that SGLang TP4 can never work.
 
-[Full configuration, image identity, patches and methodology](docs/QWEN38-NVFP4-TP4.md)
+[Qwen model guide](models/qwen-3.8-flash-next/README.md)
+· [Full configuration, image identity, patches and methodology](models/qwen-3.8-flash-next/nvfp4-tp4/README.md)
 · [Recorded benchmark summary](results/qwen38-nvfp4-tp4-2026-09-05.json)
 · [Resident-lane retrieval smoke output](results/qwen38-resident-niah-smoke-2026-09-05.jsonl)
 
@@ -863,7 +866,10 @@ The serving recipes never reference the sidecar; nothing fails without it.
 docker-compose.dspark-tp4.yml  the full parameterized DeepSeek serving command
 patches/                     boot-time hotfixes applied by the compose
 vllm_patch_gb10/             optional GB10 hybrid-nvfp4 plugin tree
-models/glm-5.3-flash/        GLM vLLM/SGLang GB10 findings + patches
+models/README.md            model index + operator/agent instructions
+models/glm-5.3-flash/        GLM entry guide, EXL3 recipe, earlier findings
+models/deepseek-v4-flash/    DeepSeek guide + compatibility entry scripts
+models/qwen-3.8-flash-next/  Qwen guide, NVFP4 config + benchmarks
 scripts/start-dspark-tp4.sh  worker-first launch + serving-shape gate
 scripts/stop-dspark-tp4.sh
 scripts/status-dspark-tp4.sh
