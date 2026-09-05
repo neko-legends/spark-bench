@@ -4,11 +4,21 @@
 Protocol matches the published kit receipts: temp 0, thinking off via
 top-level chat_template_kwargs, stream + include_usage, max_tokens=8,
 unique salt per cold request, one-at-a-time, TTFT = first content token.
+
+v2 (2026-09-05, per measurement-audit.REPORT.md F4): OUT_JSON is no longer
+a hardcoded dated path (that exact defect silently destroyed the pre-E2
+"before" evidence — the pre and post files were byte-identical). Output is
+now --out PATH with O_EXCL (refuses to overwrite); default is a timestamped
+path under /home/jun/glm-bench-results/. Historical files are left untouched
+as evidence.
 """
 from __future__ import annotations
 
+import argparse
 import json
+import os
 import secrets
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -19,7 +29,7 @@ BASE = "http://127.0.0.1:18888"
 SERVED = "GLM-5.3-Flash-EXL3"
 FILLER = "the "
 TASK = "Reply with OK."
-OUT_JSON = Path("/home/jun/glm-bench-results/cold-prefill-baseline-2026-09-02-pre-e2.json")
+DEFAULT_OUT_DIR = Path("/home/jun/glm-bench-results")
 
 # target prompt_tokens, http timeout seconds
 LADDER = [
@@ -229,7 +239,30 @@ def delta_metrics(before: dict, after: dict) -> dict:
     return {k: after.get(k, 0.0) - before.get(k, 0.0) for k in keys}
 
 
+def default_out_path() -> Path:
+    ts = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    return DEFAULT_OUT_DIR / f"cold-prefill-{ts}.json"
+
+
+def write_excl(path: Path, obj) -> None:
+    """Write JSON with O_EXCL — refuse to overwrite, always."""
+    data = json.dumps(obj, indent=2) + "\n"
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    with os.fdopen(fd, "w") as f:
+        f.write(data)
+
+
 def main() -> int:
+    global BASE
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--out", metavar="PATH",
+                    help=f"output JSON path (O_EXCL, refuses to overwrite); "
+                         f"default {DEFAULT_OUT_DIR}/cold-prefill-<UTC>.json")
+    ap.add_argument("--base", default=BASE, help="serve base URL (default %(default)s)")
+    args = ap.parse_args()
+    BASE = args.base
+    out_json = Path(args.out) if args.out else default_out_path()
+
     st, body = http_get("/health")
     print(f"GET /health -> {st} {body!r}", flush=True)
     if st != 200:
@@ -302,8 +335,14 @@ def main() -> int:
         "results": results,
         "wall_clock": time.strftime("%Y-%m-%d %H:%M:%S %z"),
     }
-    OUT_JSON.write_text(json.dumps(payload, indent=2) + "\n")
-    print(f"\nWrote {OUT_JSON}", flush=True)
+    out_json.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        write_excl(out_json, payload)
+    except FileExistsError:
+        print(f"REFUSED: {out_json} already exists (O_EXCL) — never overwrite; "
+              f"rerun for a fresh timestamp or pass --out", flush=True)
+        return 2
+    print(f"\nWrote {out_json}", flush=True)
     return 0
 
 
