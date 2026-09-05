@@ -24,9 +24,11 @@ report, not a completed production qualification; long-run stability is not yet 
   docker pull ghcr.io/neko-legends/qwen38-flash-next-nvfp4-gb10:e1
   ```
 
-  Verify the digest matches before launch. This image predates the
-  `THINKING_DEFAULT=off` chat-template overlay (spark-bench `5d6f0a5`) — that
-  overlay is applied by the launcher at boot, not baked into the image.
+  Verify the digest matches before launch. This image predates the serve-side
+  thinking-default-off change (spark-bench `8fede19`, `--default-chat-template-kwargs
+  '{"enable_thinking": false}'` — supersedes the `5d6f0a5` template overlay, which
+  desynced vLLM's qwen3 reasoning parser from the renderer). That flag is applied
+  by the launcher at boot, not baked into the image.
 - Built image **ID** (not a published registry manifest digest): `sha256:6fc66a65645c6d3099aba31231cc005a5074608f1f572399e98f5dfa6a6d0407`.
 - Built once on Forge; docker save/load over CX7; identical image ID checked on all ranks.
 - Installed vLLM identifies as `0.1.dev20073+g8e685d198`.
