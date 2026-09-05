@@ -1,5 +1,7 @@
 {
  "date": "2026-09-05",
+ "record_scope": "Top-level config, gates and decode fields describe the initial mmap boot. Current resident boot is recorded separately in lanes. Values transcribed from captured command output, not a complete raw per-request archive.",
+ "measurement_limits": "Aggregate: one run per concurrency per lane. C1 thinking modes differ between initial and resident headline numbers. MTP ratios are cumulative across boot traffic. No paired multi-boot significance estimate.",
  "model": "nvidia/Qwen3.8-Flash-Next-NVFP4 (official nvidia checkpoint, 132.7GB, sha fab0aecb760c)",
  "engine": "vLLM 0.1.dev20073+g8e685d198 (vllm/vllm-openai:qwen38-flash-next digest fc120ece) + GB10 patch stack (image local/qwen38-gb10:e1, id 6fc66a65645c, identical on all 4 ranks)",
  "topology": "TP4 + expert-parallel, 4x DGX Spark GB10, CX7 RoCE rail B (192.168.10.0/24), NCCL 2.30.7 host-staged",
@@ -53,7 +55,7 @@
  },
  "notes": [
   "PIECEWISE cudagraph lane (PLE mmap forbids FULL_DECODE_ONLY capture); FULL lane needs PLE_MODE=resident",
-  "NIAH 4k/32k/128k not yet run",
+  "Resident retrieval smoke passed 9/9; nominal sizes were word-count estimates, not verified tokenizer lengths. Exact 4k/32k/128k gates remain open.",
   "1M YaRN lane not enabled (known wedge >100k, vllm#54629)"
  ],
  "lanes": {
@@ -65,7 +67,8 @@
    "agg_x16": 344.0,
    "kv_pool": 5055959,
    "mtp_accept": 0.944,
-   "verdict": "DEAD END \u2014 PLE NVMe gather adds 0.4-1.3s per decode step; slower on every axis"
+   "ss_thinking": true,
+   "verdict": "Capacity-oriented alternative: slower observed aggregate, larger KV pool. Logs do not establish 0.4-1.3s overhead per decode step; residency and graph-mode effects were not isolated."
   },
   "ple_resident+FULL_DECODE_ONLY": {
    "ss_code": 70.0,
@@ -76,14 +79,19 @@
    "agg_x16": 510.6,
    "kv_pool": 4016501,
    "kv_pool_full_contexts": 15.32,
-   "mtp_accept": 0.912,
+   "mtp_accept": 0.911478,
+   "mtp_counter_scope": "Cumulative accepted 25062 / drafted 27496; not phase-specific",
+   "ss_thinking": false,
+   "ss_prose_think": 53.4,
+   "ss_code_off_runs": [70.3, 70.0, 69.6],
+   "ss_prose_off_runs": [52.6, 51.2, 51.4],
    "gpu_mem_util": 0.78,
    "gates": {
     "greedy_identity_x3": "PASS"
    },
-   "verdict": "STANDING DEFAULT \u2014 wins every speed axis; only cost is KV pool 5.06M->4.02M"
+   "verdict": "Current tested serving configuration; improved observed speeds with smaller KV pool. Aggregate repeatability, exact-length NIAH and long soak remain open."
   }
  },
  "standing_config": "ple_resident+FULL_DECODE_ONLY",
- "sglang_lane": "researched (artifacts/qwen38-nvfp4-20260905/sglang-lane.REPORT.md): TP4 hard-blocked on GB10 SM121 QSA kernel (head-topology contract TP1/TP2 only); 2xTP2 projected SS ~40 / agg ~300@16 \u2014 loses to vLLM FULL lane (70 / 510.6) on both axes; also missing FP8_BLOCK_SCALES MTP dispatch + open uptime-decay bug #37326. Not pursued."
+ "sglang_lane": "Source-reviewed only, not benchmarked. Inspected SM121 QSA kernel supports TP1/TP2 head topologies; TP4 and NVIDIA FP8_BLOCK_SCALES MTP require further work. External TP2 results are not a local engine comparison. vLLM retained."
 }

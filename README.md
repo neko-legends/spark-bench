@@ -1,19 +1,20 @@
 # spark-bench
 
-> ### 4 home boxes. 1M context. 320B-A18B MoE.
-> **📖 Reads 1,500 pages in 64 s** — cold prefill went **773 → 1560 tok/s (+102%)** in one day.
-> **⚡ Four concurrent users at 129 tok/s** (+19% today) · **96 tok/s single-stream** structured output · all on **4× DGX Spark** (~$4k of mini-PCs, not a datacenter).
-> **→ [Skip to the configs & numbers](#glm-5-3-flash)** — every setting below is copy-paste runnable, no gatekeeping.
+> ### 4 DGX Sparks. Three model lanes. One shared TP4 cluster.
+> **Qwen 3.8 Flash Next · official NVIDIA NVFP4:** **70.0 tok/s single-stream code** and **510.6 tok/s aggregate at 16 streams** in the first resident-PLE/full-graph tests.
+> Native **262,144-token context**, **4.02M-token bf16 KV pool**. Preliminary workload-specific results—not a throughput guarantee.
+> **→ [Qwen configs & measurements](#qwen-3-8-flash)** · [GLM archive](#glm-5-3-flash) · [DeepSeek archive](#deepseek-v4-flash)
 
 Running big MoE models across **four NVIDIA DGX Sparks** (GB10) as one TP=4
 world over a switched CX-7 RoCE fabric — the recipes, the launchers, the
 fabric runbook, and every benchmark we measured along the way, dated.
 
-Two model lanes, kept separate:
+Three model lanes, kept separate (they share the hardware; they are not simultaneous deployments):
 
 | Lane | Stack | Status | Headline (this cluster) |
 |---|---|---|---|
-| **[GLM 5.3 Flash](#glm-5-3-flash)** | vLLM · EXL3 4bpw · DFlash2 · 1M ctx | **serving now** (`forge:18888`) | 128.9 tok/s 4-stream agg · 1560 tok/s cold prefill @100k · 96 tok/s structured C1 |
+| **[Qwen 3.8 Flash Next](#qwen-3-8-flash)** | vLLM · official NVIDIA NVFP4 · TP4+EP · MTP k=2 · 262k ctx | **serving now** (`forge:8000`) | 70.0 tok/s C1 code · 510.6 tok/s aggregate @16 · 4.02M-token KV pool; preliminary |
+| **[GLM 5.3 Flash](#glm-5-3-flash)** | vLLM · EXL3 4bpw · DFlash2 · 1M ctx | stopped; recipe and results retained | 128.9 tok/s 4-stream agg · 1560 tok/s cold prefill @100k · 96 tok/s structured C1 |
 | **[DeepSeek V4 Flash](#deepseek-v4-flash)** | vLLM · abliterated NVFP4 · MTP | recipe kept, not serving | 136 tok/s C1 median (145.5 peak) · 290.3 engine record · 182 tok/s C4 |
 
 Also here: an optional **[catch-up sidecar](#catch-up-sidecar-optional)** that
@@ -26,39 +27,83 @@ chronological order. Every number carries its date, its ruler, and its config.
 
 ---
 
-<a id="glm-5-3-flash"></a>
+<a id="qwen-3-8-flash"></a>
 
 ## Qwen 3.8 Flash Next (NVFP4) — 4× DGX Spark
 
-nvidia/Qwen3.8-Flash-Next-NVFP4 (official NVIDIA checkpoint), vLLM TP4 + expert-parallel,
-one endpoint on `forge:8000`. Image: `vllm/vllm-openai:qwen38-flash-next` (digest
-`fc120ece`) + 11-patch GB10 stack (`artifacts/qwen38-nvfp4-20260905/`, launcher +
-Dockerfile + patch provenance). First served 2026-09-05.
+[nvidia/Qwen3.8-Flash-Next-NVFP4](https://huggingface.co/nvidia/Qwen3.8-Flash-Next-NVFP4),
+the official NVIDIA checkpoint, first served **2026-09-05**. One vLLM endpoint
+at `forge:8000`, **TP4 + expert parallel**, one NVMe checkpoint copy per node,
+CX-7 RoCE between all four GB10s. No checkpoint conversion or TP2 pairs.
 
-| Metric | tsw2k published (same hw) | Ours 2026-09-05 |
+### Tested configurations and measurements
+
+| Metric | NVMe mmap PLE + PIECEWISE | Resident PLE + FULL_DECODE_ONLY (current) |
 |---|---:|---:|
-| KV pool (bf16) | 4.70M tok | **5.06M tok** (19.3× 262k) |
-| Aggregate decode @4 | 53 | **191.5 tok/s** |
-| Aggregate decode @8 | 97 | **334.1 tok/s** |
-| Aggregate decode @16 | 157 | **510.6 tok/s** |
-| MTP k=2 acceptance | 0.856 | **0.912** |
-| Single-stream decode | 31.0 | **70.0 code / 51.4 prose** |
-| Gates | — | greedy byte-identical ×3 PASS, tool-call PASS |
+| GPU memory utilization setting | 0.80 | 0.78 |
+| bf16 KV pool | 5,055,959 tokens | **4,016,501 tokens** (15.32× native context) |
+| Aggregate @4, end-to-end | 105.5 tok/s | **191.5 tok/s** |
+| Aggregate @8, end-to-end | 210.6 tok/s | **334.1 tok/s** |
+| Aggregate @16, end-to-end | 344.0 tok/s | **510.6 tok/s** |
+| C1 code, thinking off | not separately measured | **70.0 tok/s**, median of 70.3 / 70.0 / 69.6 |
+| C1 prose, thinking off | not separately measured | **51.4 tok/s**, median of 52.6 / 51.2 / 51.4 |
+| C1 code, thinking on | 26.3 tok/s (one run) | **52.3 tok/s**, median of 3 |
+| C1 prose, thinking on | 24.8 tok/s (one run) | **53.4 tok/s**, median of 3 |
+| Cumulative MTP accepted/drafted tokens | 22,705 / 24,042 (94.4%) | 25,062 / 27,496 (91.1%) |
 
-**Standing config (2026-09-05 PM): PLE resident + FULL_DECODE_ONLY cudagraphs,
-GPU mem 0.78.** The mmap-PLE + PIECEWISE lane (first boot) is a measured dead
-end: PLE NVMe gathers add 0.4-1.3 s per decode step — 26.3 SS / 344 agg@16 vs
-70.0 / 510.6 resident. Its only win was KV pool (5.06M vs 4.02M; both ample).
-SGLang lane researched and rejected: TP4 hard-blocked on GB10 (SM121 QSA kernel
-supports TP1/TP2 head topologies only); 2×TP2 projected SS ~40 / agg ~300@16
-loses on both axes; FP8_BLOCK_SCALES MTP gap + open uptime-decay bug.
-Raw: [`results/qwen38-nvfp4-tp4-2026-09-05.json`](results/qwen38-nvfp4-tp4-2026-09-05.json).
-NIAH pending. 1M YaRN lane deliberately off (known wedge).
+**Reading these honestly:** aggregate cells are one 1,200-token-per-stream code
+run at each concurrency, temperature 0, thinking off, usage-based token counts
+divided by wall time. C1 uses 400-token budgets and first-to-last streaming-delta
+timing. These are preliminary observations, not paired multi-boot significance
+estimates. MTP ratios cover each boot's accumulated traffic, not isolated bench
+windows. The initial 26.3/24.8 C1 figures had thinking **on** and must not be used
+as a direct baseline for the 70.0/51.4 thinking-off figures.
+
+The current configuration improved both observed aggregate throughput and C1
+speed, at the cost of ~1.04M KV tokens. PLE residency, graph mode and memory
+budget changed together; we have **not isolated their individual contributions**.
+The earlier claim that mmap adds 0.4–1.3 seconds to *every decode step* was not
+established by the logs (they also included long-prefill traffic). Keep mmap as
+a capacity-oriented alternative, not a universal dead end.
+
+### Configuration, validation and references
+
+Current launch settings: **resident PLE, FULL_DECODE_ONLY**, graph capture sizes
+`[1,2,4,8]`, MTP k=2, bf16 KV, 262,144 native context, 16 sequences, MNBT 8192,
+GPU memory utilization 0.78, stock-selected MoE backend, TP4+EP. Native context
+is the supported target; **1M YaRN is not our production default**.
+
+- Greedy repeatability: simple probe byte-identical ×3 on the resident lane.
+  Tool-call smoke passed on the initial mmap lane; repeat validation under load
+  and a longer stability soak remain open.
+- Retrieval smoke: **9/9 passed** on the resident lane, across three nominal
+  sizes and 0/50/100% insertion positions. Sizes were estimated from word counts,
+  **not tokenizer-verified 4k/32k/128k**; those exact-length gates remain open.
+- SGLang was source-reviewed, **not benchmarked here**. The inspected SM121 QSA
+  implementation restricts supported head topologies to TP1/TP2, and the NVIDIA
+  MTP checkpoint needs additional dispatch work. We are retaining vLLM TP4;
+  external TP2 measurements are not a measured engine comparison or a universal
+  claim that SGLang TP4 can never work.
+
+[Full configuration, image identity, patches and methodology](docs/QWEN38-NVFP4-TP4.md)
+· [Recorded benchmark summary](results/qwen38-nvfp4-tp4-2026-09-05.json)
+· [Resident-lane retrieval smoke output](results/qwen38-resident-niah-smoke-2026-09-05.jsonl)
+
+Community references: [tsw2k quad recipe](https://github.com/tsw2k/Qwen3.8-Flash-Next-Quad-DGX-Sparks),
+[NVIDIA forum writeup](https://forums.developer.nvidia.com/t/381897),
+[MiaAI dual-Spark recipe](https://github.com/MiaAI-Lab/Qwen3.8-Flash-Next-Dual-DGX-Sparks),
+[blazux GB10 patches](https://github.com/blazux/qwen3.8-Flash-DGX), and
+[getrefined NVIDIA PLE fix](https://github.com/getrefined/Qwen3.8-Flash-Next-NVFP4-vLLM-DGX-Spark).
+The forum's 31 C1 / 97 @8 / 157 @16 are useful reference points, not a controlled
+comparison against our prompt corpus, output lengths or timing protocol.
+
+<a id="glm-5-3-flash"></a>
 
 ## GLM 5.3 Flash — 4× DGX Spark
 
-GLM-5.3-Flash (320B total / 18B active MoE), TP=4. Primary stack since
-2026-08-28: **vLLM + EXL3 TR3 4bpw + DFlash2 speculative**, 1M context live.
+GLM-5.3-Flash (320B total / 18B active MoE), TP=4. Served from 2026-08-28;
+**stopped for the Qwen campaign on 2026-09-05**. Archived stack:
+**vLLM + EXL3 TR3 4bpw + DFlash2 speculative**, 1M configured context.
 The earlier SGLang NVFP4 lane is kept as a fallback and documented at the
 bottom of this section.
 

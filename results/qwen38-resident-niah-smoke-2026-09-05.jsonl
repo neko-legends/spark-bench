@@ -1,0 +1,9 @@
+{"ctx": 4000, "depth": 0, "pass": true, "s": 2.5, "ans": "NEBULA-7742-KOALA"}
+{"ctx": 4000, "depth": 50, "pass": true, "s": 1.1, "ans": "NEBULA-7742-KOALA"}
+{"ctx": 4000, "depth": 100, "pass": true, "s": 1.1, "ans": "NEBULA-7742-KOALA"}
+{"ctx": 32000, "depth": 0, "pass": true, "s": 7.5, "ans": "NEBULA-7742-KOALA"}
+{"ctx": 32000, "depth": 50, "pass": true, "s": 7.1, "ans": "NEBULA-7742-KOALA"}
+{"ctx": 32000, "depth": 100, "pass": true, "s": 4.8, "ans": "NEBULA-7742-KOALA"}
+{"ctx": 128000, "depth": 0, "pass": true, "s": 25.4, "ans": "NEBULA-7742-KOALA"}
+{"ctx": 128000, "depth": 50, "pass": true, "s": 25.4, "ans": "NEBULA-7742-KOALA"}
+{"ctx": 128000, "depth": 100, "pass": true, "s": 17.4, "ans": "NEBULA-7742-KOALA"}
