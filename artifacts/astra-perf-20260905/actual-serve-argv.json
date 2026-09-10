@@ -1,0 +1,15 @@
+{
+  "--tensor-parallel-size": "4",
+  "--nnodes": "4",
+  "--node-rank": "0",
+  "--no-enable-flashinfer-autotune": true,
+  "--async-scheduling": true,
+  "--quantization": "exl3",
+  "--max-model-len": "1000000",
+  "--gpu-memory-utilization": "0.80",
+  "--max-num-seqs": "4",
+  "--max-num-batched-tokens": "7168",
+  "--kv-cache-dtype": "fp8",
+  "--speculative-config": "{\"method\":\"dflash\",\"model\":\"/models/dflash2\",\"num_speculative_tokens\":7,\"kv_cache_dtype\":\"auto\",\"draft_sample_method\":\"probabilistic\",\"rejection_sample_method\":\"standard\",\"draft_tensor_parallel_size\":1}"
+}
+long_prefill_flag_present False

@@ -1,0 +1,18 @@
+Qwen3.8-Flash-Next-Quad-DGX-Sparks
+Copyright 2026 tsw2k
+
+This repository vendors GB10 (SM121) vLLM patches from
+https://github.com/blazux/qwen3.8-Flash-DGX (Apache-2.0, Copyright 2026 blazux),
+which itself incorporates contributions by @Saren-Arterius (GB10 FLA fixes,
+PLE gather fast path, mamba state-copy guard, fp8 side-layer conversion),
+@AndreasKaratzas (vllm#50729), @k3dani (persistent_topk diagnosis) and
+@jschmied (independent reproduction, native-offload fixes, concurrency data).
+
+Vendored files (src/, unmodified unless noted in the file header):
+  vllm_ple_mmap.py, mamba_utils_guarded.py, patch_mamba_block_size.py,
+  patch_qsa_exact_topk.py, vllm_fp8_hybrid_modelopt.py,
+  test_ple_mmap_cpu.py, test_qsa_exact_topk_cpu.py
+
+The multi-node launch pattern and GB10 operational discipline (unconditional
+page-cache flusher, worker-first launch, image-ID verification, gate suite)
+follow https://github.com/tonyd2wild/GLM-5.3-Flash-NVFP4-1M-KV-4x-DGX-Spark.

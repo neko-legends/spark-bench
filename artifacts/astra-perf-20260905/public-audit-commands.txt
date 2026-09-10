@@ -1,0 +1,9 @@
+recipe-head.json 18581 https://api.github.com/repos/MiaAI-Lab/GLM-5.3-Flash-EXL3-2x-DGX-Sparks/commits/HEAD
+recipe-compare.json 33156 https://api.github.com/repos/MiaAI-Lab/GLM-5.3-Flash-EXL3-2x-DGX-Sparks/compare/eb0469fbb2b49fd7c025f594a3339a121e58f7a9...3021f24c88a0904c768c46ff22a508407e31360a
+recipe-latest-exl3.py 56940 https://raw.githubusercontent.com/MiaAI-Lab/GLM-5.3-Flash-EXL3-2x-DGX-Sparks/3021f24c88a0904c768c46ff22a508407e31360a/overlay/exl3.py
+exllama-moe-history.json 27130 https://api.github.com/repos/turboderp-org/exllamav3/commits?path=exllamav3/exllamav3_ext/quant/exl3_moe.cu&per_page=8
+exllama-moe-latest-source.txt 11157 https://raw.githubusercontent.com/turboderp-org/exllamav3/d5e4361fd5d77b5d7d64ed2744595f2d6359c1bd/exllamav3/exllamav3_ext/quant/exl3_moe.cu
+vllm-dflash-history.json 37921 https://api.github.com/repos/vllm-project/vllm/commits?path=vllm/v1/worker/gpu/spec_decode/dflash/utils.py&per_page=8
+vllm-dflash-latest-source.txt 2582 https://raw.githubusercontent.com/vllm-project/vllm/d87a440f88e28e5b37f9b1e22ce214d0426d5352/vllm/v1/worker/gpu/spec_decode/dflash/utils.py
+reederey-history.json 48236 https://api.github.com/repos/Reederey87/glm53-flash-exl3-2x-dgx-spark/commits?path=README.md&per_page=8
+reederey-latest-source.txt 16879 https://raw.githubusercontent.com/Reederey87/glm53-flash-exl3-2x-dgx-spark/8133af321fe52d299b8492444643f4cb80e413e5/README.md

@@ -1,0 +1,23 @@
+test_baked_patch_sweep_confounds (__main__.SourceChecks.test_baked_patch_sweep_confounds) ... ok
+test_decode_dispatch_bounds (__main__.SourceChecks.test_decode_dispatch_bounds) ... ok
+test_decode_floor_cannot_reduce_pure_decode_tokens (__main__.SourceChecks.test_decode_floor_cannot_reduce_pure_decode_tokens) ... ok
+test_draft_loading_retains_target_parallel_config (__main__.SourceChecks.test_draft_loading_retains_target_parallel_config) ... ok
+test_exact_ticket_backport_matches_installed_pin (__main__.SourceChecks.test_exact_ticket_backport_matches_installed_pin) ... ok
+test_existing_python_adapter_accepts_29_and_30_args (__main__.SourceChecks.test_existing_python_adapter_accepts_29_and_30_args) ... ok
+test_launcher_identity_and_missing_forwarding (__main__.SourceChecks.test_launcher_identity_and_missing_forwarding) ... ok
+test_ticket_installer_idempotence_drift_and_optout (__main__.SourceChecks.test_ticket_installer_idempotence_drift_and_optout) ... ok
+test_topk_candidate_syntax_and_math_not_gpu (__main__.SourceChecks.test_topk_candidate_syntax_and_math_not_gpu) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.216s
+
+OK
+checking file vllm/model_executor/layers/logits_processor.py
+checking file vllm/model_executor/models/qwen3_dflash2.py
+checking file quant/exl3_devctx.cu
+checking file quant/exl3_devctx.cuh
+checking file quant/exl3_moe.cu
+checking file quant/exl3_moe.cuh
+checking file quant/exl3_moe_common.cuh
+checking file quant/exl3_moe_kernel.cuh
+bash -n: both scripts PASS

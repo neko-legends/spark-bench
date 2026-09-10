@@ -1,0 +1,79 @@
+f44302e9a676c0c88f02c3a04aa35788709131036e11c7554b29d9c8cf7410c7  /home/jun/launch-glm53-exl3-tp4.sh
+["/start.sh"]
+[{"Type":"bind","Source":"/home/jun/models/glm-5.3-flash-exl3","Destination":"/models/exl3","Mode":"ro","RW":false,"Propagation":"rprivate"},{"Type":"bind","Source":"/tmp/patch_indexer_workspace.py","Destination":"/opt/glm53/patch_indexer_workspace.py","Mode":"ro","RW":false,"Propagation":"rprivate"},{"Type":"bind","Source":"/tmp/patch_kpool_tail_slotmap.py","Destination":"/opt/glm53/patch_kpool_tail_slotmap.py","Mode":"ro","RW":false,"Propagation":"rprivate"},{"Type":"bind","Source":"/tmp/patch_glm5_drafter_group.py","Destination":"/opt/glm53/patch_glm5_drafter_group.py","Mode":"ro","RW":false,"Propagation":"rprivate"},{"Type":"bind","Source":"/tmp/patch_exl3_fat_kernel.py","Destination":"/opt/glm53/patch_exl3_fat_kernel.py","Mode":"ro","RW":false,"Propagation":"rprivate"},{"Type":"bind","Source":"/home/jun/models/glm-5.3-flash-dflash2","Destination":"/models/dflash2","Mode":"ro","RW":false,"Propagation":"rprivate"},{"Type":"bind","Source":"/tmp/glm53-exl3-start.sh","Destination":"/start.sh","Mode":"ro","RW":false,"Propagation":"rprivate"},{"Type":"bind","Source":"/tmp/patch_hybrid_prefix_hit.py","Destination":"/opt/glm53/patch_hybrid_prefix_hit.py","Mode":"ro","RW":false,"Propagation":"rprivate"},{"Type":"bind","Source":"/tmp/patch_scheduler_decode_floor.py","Destination":"/opt/glm53/patch_scheduler_decode_floor.py","Mode":"ro","RW":false,"Propagation":"rprivate"},{"Type":"bind","Source":"/tmp/chat_template.jinja","Destination":"/opt/glm53/chat_template.jinja","Mode":"ro","RW":false,"Propagation":"rprivate"},{"Type":"bind","Source":"/var/tmp/glm53-exl3-vllm-cache","Destination":"/root/.cache/vllm","Mode":"","RW":true,"Propagation":"rprivate"},{"Type":"bind","Source":"/tmp/patch_spinwait.py","Destination":"/opt/glm53/patch_spinwait.py","Mode":"ro","RW":false,"Propagation":"rprivate"},{"Type":"bind","Source":"/var/tmp/glm53-exl3-vllm-cache/triton","Destination":"/root/.triton/cache","Mode":"","RW":true,"Propagation":"rprivate"},{"Type":"bind","Source":"/home/jun/nccl-2.30.7","Destination":"/nccl","Mode":"ro","RW":false,"Propagation":"rprivate"},{"Type":"bind","Source":"/var/tmp/glm53-exl3-vllm-cache/tilelang","Destination":"/root/.tilelang/cache","Mode":"","RW":true,"Propagation":"rprivate"},{"Type":"bind","Source":"/tmp/patch_suppress_stops_in_reasoning.py","Destination":"/opt/glm53/patch_suppress_stops_in_reasoning.py","Mode":"ro","RW":false,"Propagation":"rprivate"},{"Type":"bind","Source":"/tmp/patch_xgrammar_termination.py","Destination":"/opt/glm53/patch_xgrammar_termination.py","Mode":"ro","RW":false,"Propagation":"rprivate"}]
+               total        used        free      shared  buff/cache   available
+Mem:           121Gi       116Gi       4.6Gi       7.0Gi       8.7Gi       5.2Gi
+Swap:           15Gi       4.4Gi        11Gi
+# HELP vllm:spec_decode_num_drafts_total Number of spec decoding drafts.
+# TYPE vllm:spec_decode_num_drafts_total counter
+vllm:spec_decode_num_drafts_total{engine="0",model_name="GLM-5.3-Flash-EXL3"} 77.0
+# HELP vllm:spec_decode_num_drafts_created Number of spec decoding drafts.
+# TYPE vllm:spec_decode_num_drafts_created gauge
+vllm:spec_decode_num_drafts_created{engine="0",model_name="GLM-5.3-Flash-EXL3"} 1.7885542815919778e+09
+# HELP vllm:spec_decode_num_draft_tokens_total Number of draft tokens.
+# TYPE vllm:spec_decode_num_draft_tokens_total counter
+vllm:spec_decode_num_draft_tokens_total{engine="0",model_name="GLM-5.3-Flash-EXL3"} 539.0
+# HELP vllm:spec_decode_num_draft_tokens_created Number of draft tokens.
+# TYPE vllm:spec_decode_num_draft_tokens_created gauge
+vllm:spec_decode_num_draft_tokens_created{engine="0",model_name="GLM-5.3-Flash-EXL3"} 1.7885542815940857e+09
+# HELP vllm:spec_decode_num_accepted_tokens_total Number of accepted tokens.
+# TYPE vllm:spec_decode_num_accepted_tokens_total counter
+vllm:spec_decode_num_accepted_tokens_total{engine="0",model_name="GLM-5.3-Flash-EXL3"} 195.0
+# HELP vllm:spec_decode_num_accepted_tokens_created Number of accepted tokens.
+# TYPE vllm:spec_decode_num_accepted_tokens_created gauge
+vllm:spec_decode_num_accepted_tokens_created{engine="0",model_name="GLM-5.3-Flash-EXL3"} 1.788554281594715e+09
+# HELP vllm:spec_decode_num_accepted_tokens_per_pos_total Accepted tokens per draft position.
+# TYPE vllm:spec_decode_num_accepted_tokens_per_pos_total counter
+vllm:spec_decode_num_accepted_tokens_per_pos_total{engine="0",model_name="GLM-5.3-Flash-EXL3",position="0"} 61.0
+vllm:spec_decode_num_accepted_tokens_per_pos_total{engine="0",model_name="GLM-5.3-Flash-EXL3",position="1"} 43.0
+vllm:spec_decode_num_accepted_tokens_per_pos_total{engine="0",model_name="GLM-5.3-Flash-EXL3",position="2"} 30.0
+vllm:spec_decode_num_accepted_tokens_per_pos_total{engine="0",model_name="GLM-5.3-Flash-EXL3",position="3"} 22.0
+vllm:spec_decode_num_accepted_tokens_per_pos_total{engine="0",model_name="GLM-5.3-Flash-EXL3",position="4"} 17.0
+vllm:spec_decode_num_accepted_tokens_per_pos_total{engine="0",model_name="GLM-5.3-Flash-EXL3",position="5"} 12.0
+vllm:spec_decode_num_accepted_tokens_per_pos_total{engine="0",model_name="GLM-5.3-Flash-EXL3",position="6"} 10.0
+# HELP vllm:spec_decode_num_accepted_tokens_per_pos_created Accepted tokens per draft position.
+# TYPE vllm:spec_decode_num_accepted_tokens_per_pos_created gauge
+vllm:spec_decode_num_accepted_tokens_per_pos_created{engine="0",model_name="GLM-5.3-Flash-EXL3",position="0"} 1.788554281597786e+09
+vllm:spec_decode_num_accepted_tokens_per_pos_created{engine="0",model_name="GLM-5.3-Flash-EXL3",position="1"} 1.78855428159798e+09
+vllm:spec_decode_num_accepted_tokens_per_pos_created{engine="0",model_name="GLM-5.3-Flash-EXL3",position="2"} 1.7885542815982795e+09
+vllm:spec_decode_num_accepted_tokens_per_pos_created{engine="0",model_name="GLM-5.3-Flash-EXL3",position="3"} 1.7885542815983148e+09
+vllm:spec_decode_num_accepted_tokens_per_pos_created{engine="0",model_name="GLM-5.3-Flash-EXL3",position="4"} 1.7885542816002834e+09
+vllm:spec_decode_num_accepted_tokens_per_pos_created{engine="0",model_name="GLM-5.3-Flash-EXL3",position="5"} 1.7885542816003165e+09
+vllm:spec_decode_num_accepted_tokens_per_pos_created{engine="0",model_name="GLM-5.3-Flash-EXL3",position="6"} 1.788554281600877e+09
+# HELP vllm:num_requests_running Number of requests in model execution batches.
+# TYPE vllm:num_requests_running gauge
+vllm:num_requests_running{engine="0",model_name="GLM-5.3-Flash-EXL3"} 0.0
+# HELP vllm:num_requests_waiting Number of requests waiting to be processed.
+# TYPE vllm:num_requests_waiting gauge
+vllm:num_requests_waiting{engine="0",model_name="GLM-5.3-Flash-EXL3"} 0.0
+# HELP vllm:num_requests_waiting_by_reason Number of waiting requests by reason. Reason labels: 'capacity' = waiting for scheduling capacity; 'deferred' = deferred by transient constraints (LoRA budget, KV transfer, blocked status). Sum of all reasons equals vllm:num_requests_waiting.
+# TYPE vllm:num_requests_waiting_by_reason gauge
+vllm:num_requests_waiting_by_reason{engine="0",model_name="GLM-5.3-Flash-EXL3",reason="capacity"} 0.0
+vllm:num_requests_waiting_by_reason{engine="0",model_name="GLM-5.3-Flash-EXL3",reason="deferred"} 0.0
+# HELP vllm:kv_cache_usage_perc KV-cache usage. 1 means 100 percent usage.
+# TYPE vllm:kv_cache_usage_perc gauge
+vllm:kv_cache_usage_perc{engine="0",model_name="GLM-5.3-Flash-EXL3"} 0.0
+# HELP vllm:prefix_cache_queries_total Prefix cache queries, in terms of number of queried tokens.
+# TYPE vllm:prefix_cache_queries_total counter
+vllm:prefix_cache_queries_total{engine="0",model_name="GLM-5.3-Flash-EXL3"} 4.8898651e+07
+# HELP vllm:prefix_cache_queries_created Prefix cache queries, in terms of number of queried tokens.
+# TYPE vllm:prefix_cache_queries_created gauge
+vllm:prefix_cache_queries_created{engine="0",model_name="GLM-5.3-Flash-EXL3"} 1.788554281625082e+09
+# HELP vllm:prefix_cache_hits_total Prefix cache hits, in terms of number of cached tokens.
+# TYPE vllm:prefix_cache_hits_total counter
+vllm:prefix_cache_hits_total{engine="0",model_name="GLM-5.3-Flash-EXL3"} 4.6611712e+07
+# HELP vllm:prefix_cache_hits_created Prefix cache hits, in terms of number of cached tokens.
+# TYPE vllm:prefix_cache_hits_created gauge
+vllm:prefix_cache_hits_created{engine="0",model_name="GLM-5.3-Flash-EXL3"} 1.78855428162588e+09
+# HELP vllm:external_prefix_cache_queries_total External prefix cache queries from KV connector cross-instance cache sharing, in terms of number of queried tokens.
+# TYPE vllm:external_prefix_cache_queries_total counter
+vllm:external_prefix_cache_queries_total{engine="0",model_name="GLM-5.3-Flash-EXL3"} 0.0
+# HELP vllm:external_prefix_cache_queries_created External prefix cache queries from KV connector cross-instance cache sharing, in terms of number of queried tokens.
+# TYPE vllm:external_prefix_cache_queries_created gauge
+vllm:external_prefix_cache_queries_created{engine="0",model_name="GLM-5.3-Flash-EXL3"} 1.7885542816264791e+09
+# HELP vllm:external_prefix_cache_hits_total External prefix cache hits from KV connector cross-instance cache sharing, in terms of number of cached tokens.
+# TYPE vllm:external_prefix_cache_hits_total counter
+vllm:external_prefix_cache_hits_total{engine="0",model_name="GLM-5.3-Flash-EXL3"} 0.0
+# HELP vllm:external_prefix_cache_hits_created External prefix cache hits from KV connector cross-instance cache sharing, in terms of number of cached tokens.
+# TYPE vllm:external_prefix_cache_hits_created gauge
+vllm:external_prefix_cache_hits_created{engine="0",model_name="GLM-5.3-Flash-EXL3"} 1.788554281627376e+09

@@ -1,0 +1,175 @@
+# Dockerfile.qwen38-gb10 — Qwen3.8-Flash-Next-NVFP4 serving image for 4x DGX Spark (GB10, sm_121)
+#
+# Base: the official day-0 vLLM image, pinned by digest (verified 2026-09-05:
+# this is still the digest the `qwen38-flash-next` tag resolves to on Docker Hub;
+# multi-arch arm64 manifest sha256:3b0e188f..., amd64 sha256:0aea3024...).
+# vLLM 0.1.dev20073, torch 2.13 cu130, model layout
+# vllm/models/qwen3_8_flash_next/ (pre-qwen4_exp-rename).
+#
+# Patch stack (all files vendored in patches/, see patches/PATCHES.md for
+# provenance + commits + why):
+#   0. PLE FP8 resolver, env-gated PLE_FORCE_FP8=1 (getrefined ple-force-fp8.patch)
+#      — pre-rename backport of vllm#54882 (d4d703caf, 2026-09-03, NOT in this
+#      image). REQUIRED for the nvidia/Qwen3.8-Flash-Next-NVFP4 checkpoint
+#      (fp8 PLE shards + global weight_scale under a ModelOpt mixed-precision
+#      quant config).
+#   1. PLE n-gram table mmapped from NVMe (VLLM_PLE_MMAP=1) — 44 GiB lookup
+#      table never enters the 128 GB unified pool.
+#   2. GB10 FLA fixes: 99 KiB shmem gate + fla#953 num_warps pin (always on).
+#   3. Mamba state-copy race fix (vllm#50729) + bounds guard (always on).
+#   4. Prefix-caching block_size fix (always on; makes --enable-prefix-caching correct).
+#   5. Exact QSA top-k (VLLM_QSA_EXACT_TOPK=1) — deterministic torch.topk fallback.
+#   5b. Deterministic persistent_topk KERNEL (VLLM_QSA_DET_TOPK=1, vllm#55122,
+#      @jschmied) — same determinism at full kernel speed; compiled at build
+#      from checksum-verified sources. DET beats EXACT when both set is reversed:
+#      EXACT wins when set (qsadet_patch composes: VLLM_QSA_EXACT_TOPK wins).
+#   6. NVFP4 + blockwise-fp8 side-layers hybrid mode (VLLM_FP8_HYBRID=1, no-op off).
+#   7. PLE lane C: native CPU offload for ModelOpt checkpoints (VLLM_PLE_CPU_OFFLOAD=1).
+#   8. PLE lane C multi-node: allow the offload at nnodes=4.
+#   9. FP8_BLOCK_SCALES routed experts -> Fp8MoEMethod (MiaAI port, always on;
+#      REQUIRED for MTP on the nvidia checkpoint: its MTP experts are 128x128
+#      block-scaled FP8, which the stock dispatch cannot build, so the MTP MoE
+#      comes up unquantized and dies ~7 min into loading. Upstream vLLM
+#      (incl. model-card commit d4d703caf) has the same gap).
+#   10. fp8_e4m3 KV cache on the QSA path (blazux patch 7, @Nanetnounou,
+#      vllm#54426). INERT at --kv-cache-dtype auto (tl.constexpr branch compiles
+#      out); ~1.7-1.9x KV pool when enabled. Opt-in lane: KV_CACHE_DTYPE=fp8.
+#
+# BUILD ON ONE NODE ONLY (forge), then fan out and verify the image ID is
+# identical on all four nodes (see launch-qwen38-tp4.sh preflight + the report
+# runbook). Four nodes that each build the tag locally get four different
+# image IDs — a rank silently on a divergent image is the hardest multi-node
+# failure to diagnose (GLM lesson, paid for in boots).
+#
+#   cd <this dir> && docker build -f Dockerfile.qwen38-gb10 -t local/qwen38-gb10:e1 .
+#
+# The nvidia checkpoint itself is NOT in the image; mount the per-node NVMe copy
+# (see launch-qwen38-tp4.sh): /home/jun/models/qwen38-flash-next-nvfp4 -> /models/qwen38
+FROM vllm/vllm-openai:qwen38-flash-next@sha256:fc120ece0a388cc0aa1caad4a9f1cd92113484ab7ec2fd0efadd62585be05bf8
+
+# Package layout inside the official image (vLLM 0.1.dev20073, torch 2.13 cu130,
+# numpy 2.2.6 present — the patch stack needs it).
+ARG SP=/usr/local/lib/python3.12/dist-packages
+ARG PLE=${SP}/vllm/models/qwen3_8_flash_next/nvidia/ple_layer.py
+
+# Verify the vendored patch tree before touching the image (fails the build on
+# any tampered or truncated patch file). kernel-det/ sources are pinned to the
+# same sha256s blazux's Dockerfile ADD-checksums.
+COPY patches/ /opt/qwen38-patches/
+RUN grep -v ' SHA256SUMS$' /opt/qwen38-patches/SHA256SUMS > /tmp/sums \
+ && cd /opt/qwen38-patches && sha256sum -c /tmp/sums \
+ || { echo "PATCH TREE CHECKSUM FAILURE"; exit 1; }
+
+# --- 0. PLE FP8 resolver (getrefined ple-force-fp8.patch -> apply_ple_force_fp8.py) ----
+# MUST be applied before anything else touches ple_layer.py. Env-gated via
+# PLE_FORCE_FP8=1 (launcher always sets it). Placement: ABOVE the
+# isinstance(quant_config, Fp8Config) gate — the gate is what rejects the
+# ModelOpt parent config (ask getrefined how they know).
+RUN python3 /opt/qwen38-patches/apply_ple_force_fp8.py ${PLE}
+
+# --- 1. PLE n-gram table from disk (VLLM_PLE_MMAP=1) -----------------------------------
+# Appends the mmap hook at EOF of ple_layer.py; a no-op without the env var.
+# At runtime: VLLM_PLE_MMAP_WORKERS=32, VLLM_PLE_MMAP_PREWARM=1 (Jun's spec),
+# and the lookup op is declared a splitting op -> PIECEWISE cudagraphs only.
+RUN cp ${PLE} ${PLE}.orig \
+ && printf '\n\n# --- qwen38-gb10: serve the PLE n-gram table from disk (VLLM_PLE_MMAP=1) ---\nfrom vllm_ple_mmap import apply as _ple_mmap_apply\n_ple_mmap_apply(Qwen3_8FlashNextNGramEmbedding)\n' >> ${PLE} \
+ && python3 -c "import ast; ast.parse(open('${PLE}').read()); print('ple_layer.py patched OK')"
+
+# --- 2. GB10 FLA fixes (@Saren-Arterius) ----------------------------------------------
+# sm_121 reports 99 KiB shmem per block; the stock gate wants 100 KiB, so all
+# 36 GDN layers silently ran on small tiles. Plus fla#953: tl.dot race on
+# Blackwell with num_warps=4 in chunk_delta_h -> pin 2.
+ARG FLA_UTILS=${SP}/vllm/third_party/flash_linear_attention/ops/utils.py
+ARG FLA_CDH=${SP}/vllm/third_party/flash_linear_attention/ops/chunk_delta_h.py
+RUN sed -i 's|DEFAULT = 102400|DEFAULT = 101376  # spark-fla-shmem: GB10 99KiB, big GDN tiles fit|' ${FLA_UTILS} \
+ && grep -q "spark-fla-shmem" ${FLA_UTILS} && echo "fla shmem gate patched" \
+ && sed -i 's|for num_warps in \[2, 4\]|for num_warps in [2]  # spark-fla-warps: fla#953 Blackwell tl.dot race|' ${FLA_CDH} \
+ && grep -q "spark-fla-warps" ${FLA_CDH} && echo "fla num_warps pinned"
+
+# --- 3. Mamba state copy: vllm#50729 + bounds guard -------------------------------------
+RUN cp ${SP}/vllm/v1/worker/mamba_utils.py ${SP}/vllm/v1/worker/mamba_utils.py.orig
+COPY patches/mamba_utils_guarded.py ${SP}/vllm/v1/worker/mamba_utils.py
+RUN python3 -c "import ast; ast.parse(open('${SP}/vllm/v1/worker/mamba_utils.py').read()); print('mamba_utils.py guarded OK')"
+
+# --- 4. Prefix caching: block_size fix --------------------------------------------------
+# vLLM's EngineCore overwrites cache_config.block_size with the smallest KV-group
+# block size while the Mamba block is 1600; a prefix hit then restored an
+# all-zero Mamba state. With this, --enable-prefix-caching is correct.
+RUN python3 /opt/qwen38-patches/patch_mamba_block_size.py ${SP}
+
+# --- 5. Exact QSA top-k (VLLM_QSA_EXACT_TOPK=1) ----------------------------------------
+# The stock persistent_topk kernel is non-deterministic on GB10 and can drop
+# real top-k candidates (vllm#51782). Exact torch.topk path; opt-in via env.
+RUN python3 /opt/qwen38-patches/patch_qsa_exact_topk.py ${SP}/vllm/models/qwen3_8_flash_next/nvidia/ops/qsa.py
+
+# --- 7. PLE lane C: native CPU offload with ModelOpt checkpoints ----------------------
+# Regex-based ModelOpt gate (survives as a second, unconditional resolver next
+# to the env-gated one from patch 0; needed by VLLM_PLE_CPU_OFFLOAD=1).
+RUN python3 /opt/qwen38-patches/patch_ple_offload_modelopt.py ${PLE}
+
+# --- 8. PLE lane C, part 2: allow multi-node offload ----------------------------------
+# The nnodes!=1 rejection is conservatism: the offload process is spawned per
+# WorkerProc and is node-local, so TP4 across nodes is architecturally fine.
+# (Fallback lane only; on GB10 the mmap lane is the default.)
+RUN python3 /opt/qwen38-patches/patch_ple_offload_multinode.py ${SP}/vllm/v1/worker/gpu_worker.py
+
+# --- 9. FP8_BLOCK_SCALES routed experts (MiaAI merge 2026-09-05) -----------------------
+# nvidia/Qwen3.8-Flash-Next-NVFP4 stores its MTP routed experts as 128x128
+# block-scaled FP8 (config.json group_1: {num_bits 8, group_size 128}); the stock
+# ModelOptMixedPrecisionConfig dispatch returns None for that algo, building an
+# unquantized MoE that dies at load with "has no parameter 'w2_weight_scale_inv'".
+# Together with the launcher's config alias (mtp.layers.0 -> mtp.layers.48, see
+# patches/patch_checkpoint_config.py) this is what makes MTP load at all on this
+# checkpoint. MiaAI measured MTP=3 with it at TP2+EP: 2.13x decode, 72.8%
+# acceptance. Harmless on checkpoints without FP8_BLOCK_SCALES layers.
+RUN python3 /opt/qwen38-patches/patch_modelopt_fp8_block_moe.py ${SP}/vllm/model_executor/layers/quantization/modelopt.py
+
+# --- 6. Hybrid mode: NVFP4 experts + blockwise-fp8 side layers (VLLM_FP8_HYBRID=1) ----
+# No-op unless VLLM_FP8_HYBRID=1 (and harmless on the stock checkpoint);
+# vendored for parity with the tsw2k-validated image. Not used by our launcher
+# (we serve the checkpoint as published), kept so the lane exists.
+ARG MO=${SP}/vllm/model_executor/layers/quantization/modelopt.py
+ARG QSA=${SP}/vllm/models/qwen3_8_flash_next/nvidia/qsa.py
+RUN cp ${MO} ${MO}.orig \
+ && printf '\n\n# --- qwen38-gb10: NVFP4 + blockwise-fp8 side layers (VLLM_FP8_HYBRID=1) ---\nfrom vllm_fp8_hybrid_modelopt import apply as _fp8_hybrid_apply\n_fp8_hybrid_apply()\n' >> ${MO} \
+ && python3 -c "import ast; ast.parse(open('${MO}').read()); print('modelopt.py hooked OK')" \
+ && cp ${QSA} ${QSA}.orig \
+ && sed -i 's/quant_config=model\.without_modelopt_fp4(quant_config)/quant_config=_fp8_hybrid_excluded(quant_config)/' ${QSA} \
+ && sed -i 's/^from \. import model$/from . import model\nfrom vllm_fp8_hybrid_modelopt import excluded_quant_config as _fp8_hybrid_excluded/' ${QSA} \
+ && grep -q "_fp8_hybrid_excluded(quant_config)" ${QSA} && grep -q "^from vllm_fp8_hybrid_modelopt import" ${QSA} \
+ && python3 -c "import ast; ast.parse(open('${QSA}').read()); print('qsa.py hooked OK')"
+RUN cp /opt/qwen38-patches/vllm_ple_mmap.py ${SP}/vllm_ple_mmap.py \
+ && cp /opt/qwen38-patches/vllm_fp8_hybrid_modelopt.py ${SP}/vllm_fp8_hybrid_modelopt.py
+
+# --- 10. fp8_e4m3 KV cache on the QSA path (MiaAI merge 2026-09-05) ---------------------
+# blazux patch 7 (contributed by @Nanetnounou, issue #6; upstream vllm#54426):
+# dequantize-on-read for the QSA Triton kernels (main KV + the indexer raw-key
+# ring), bf16-only guards relaxed, vLLM's own _cast_kv_tile reused, N-block
+# halved when quantized to fit sm_121's 99 KiB shmem. INERT at
+# --kv-cache-dtype auto (KV_QUANT_MODE is a tl.constexpr; the bf16 path emits
+# the same code as upstream). Applied in blazux's canonical slot — AFTER
+# exact-topk (5) and the hybrid sed (6), BEFORE the qsadet kernel wiring (5b) —
+# the exact order blazux's own Dockerfile proves on this same digest-pinned
+# image. Lane: KV_CACHE_DTYPE=fp8 in the launcher (~1.7x pool, MiaAI-measured
+# on this checkpoint at TP2; quality trade on sparse attention — validate on
+# your workload before trusting it).
+RUN python3 /opt/qwen38-patches/patch_qsa_fp8_kv.py ${SP} \
+ && python3 -c "import ast; ast.parse(open('${SP}/vllm/models/qwen3_8_flash_next/nvidia/ops/qsa.py').read()); ast.parse(open('${SP}/vllm/models/qwen3_8_flash_next/nvidia/qsa.py').read()); print('qsa fp8-kv patched, both files parse')"
+
+# --- 5b. Deterministic persistent_topk kernel (VLLM_QSA_DET_TOPK=1) -------------------
+# @jschmied's deterministic persistent_topk (vllm#55122), built standalone as
+# _C_det.so with the image's nvcc (~15 s, no vLLM rebuild). Sources vendored in
+# patches/kernel-det/ and sha256-verified above against the same pins blazux's
+# Dockerfile uses (jschmied/qwen38-flash-next-gb10 @ 20f64c4c, Apache-2.0).
+# Same determinism as patch 5's exact torch.topk at full kernel speed
+# (8k: 1,476 -> 2,436 tok/s; 32k: 1,794 -> 2,904). DET is the launcher default;
+# VLLM_QSA_EXACT_TOPK=1 still wins when set.
+RUN mkdir -p /opt/llm/kernel-det/src && cp /opt/qwen38-patches/kernel-det/build_det.py /opt/qwen38-patches/kernel-det/bindings_det.cpp /opt/qwen38-patches/kernel-det/topk_det.cu /opt/qwen38-patches/kernel-det/torch_utils.h /opt/qwen38-patches/kernel-det/persistent_topk.cuh /opt/llm/kernel-det/src/ \
+ && cd /opt/llm/kernel-det/src && DET_BUILD_DIR=/opt/llm/kernel-det/build DET_ARCH=121a python3 build_det.py 2>&1 | tail -2 \
+ && cp /opt/llm/kernel-det/build/_C_det.so /opt/llm/kernel-det/_C_det.so \
+ && VLLM_QSA_PY=${SP}/vllm/models/qwen3_8_flash_next/nvidia/ops/qsa.py python3 /opt/qwen38-patches/kernel-det/qsadet_patch.py \
+ && python3 -c "import ast; ast.parse(open('${SP}/vllm/models/qwen3_8_flash_next/nvidia/ops/qsa.py').read()); print('qsadet wired OK')"
+
+# CPU-side unit tests travel with the image so any node can self-check the
+# patch stack without weights: run test_ple_mmap_cpu.py / test_qsa_exact_topk_cpu.py.
+CMD ["python3", "-c", "print('qwen38-gb10 image ready; see /opt/qwen38-patches/PATCHES.md')"]

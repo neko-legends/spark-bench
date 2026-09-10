@@ -1,0 +1,5 @@
+{
+  "sha": "32601ef7a1ce8aaa6d777778435ec499248906fb",
+  "message": "[Perf][Multimodal] Avoid duplicate text embedding in Qwen2.5-Omni (#55415)\n\nSigned-off-by: waizuichougou <2082431897@qq.com>",
+  "url": "https://github.com/vllm-project/vllm/commit/32601ef7a1ce8aaa6d777778435ec499248906fb"
+}

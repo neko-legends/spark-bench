@@ -1,0 +1,243 @@
+--- a/exllamav3/exllamav3_ext/quant/exl3_devctx.cu
++++ b/exllamav3/exllamav3_ext/quant/exl3_devctx.cu
+@@ -62,7 +62,7 @@ int* DevCtx::get_locks(int device)
+     if (!locks[device])
+     {
+         cudaSetDevice(device);
+-        size_t size = (MAX_TILES_C + MAX_BARRIERS * 2) * sizeof(int);
++        size_t size = (MAX_TILES_C + MAX_BARRIERS * 2 + MOE_SCHED_INTS) * sizeof(int);
+         cudaMalloc(&locks[device], size);
+         cudaMemset(locks[device], 0, size);
+     }
+--- a/exllamav3/exllamav3_ext/quant/exl3_devctx.cuh
++++ b/exllamav3/exllamav3_ext/quant/exl3_devctx.cuh
+@@ -8,6 +8,12 @@
+ #define MAX_BARRIERS 1024
+ #define BARRIER_LOCKS_OFFSET MAX_TILES_C
+ 
++// MoE expert scheduler state, after the barrier counters: [0] next ticket, [1] retired groups,
++// [2 + group] ticket published to group. Self-resetting, zero-initialized with the rest of the buffer
++#define MOE_MAX_GROUPS 64
++#define MOE_SCHED_OFFSET (MAX_TILES_C + 2 * MAX_BARRIERS)
++#define MOE_SCHED_INTS (2 + MOE_MAX_GROUPS)
++
+ // Workspace size
+ #define WORKSPACE_SIZE (16*1024*1024)
+ 
+--- a/exllamav3/exllamav3_ext/quant/exl3_moe.cu
++++ b/exllamav3/exllamav3_ext/quant/exl3_moe.cu
+@@ -89,6 +89,11 @@ inputs:
+     down_mcg
+     down_mul1:
+         bool, codebook flags
++
++    num_active:
++        number of experts with 0 < token count <= max_tokens_per_expert, i.e. the number of experts this kernel
++        will process. Used to size the launch: fewer, wider expert groups when few experts are active. Pass -1 if
++        unknown (defaults to MOE_SMS_PER_EXPERT-wide groups at max concurrency)
+ */
+ 
+ void exl3_moe
+@@ -127,12 +132,16 @@ void exl3_moe
+     const bool down_mcg,
+     const bool down_mul1,
+ 
+-    const float act_limit
++    const float act_limit,
++    const int num_active
+ )
+ {
+     const at::cuda::OptionalCUDAGuard device_guard(hidden_state.device());
+     cudaStream_t stream = at::cuda::getCurrentCUDAStream().stream();
+ 
++    // Nothing for the fused kernel to do
++    if (num_active == 0) return;
++
+     // Validate args
+     TORCH_CHECK_DTYPE(hidden_state, kHalf);
+     TORCH_CHECK_DIM(hidden_state, 2);
+@@ -198,10 +207,19 @@ void exl3_moe
+     int cc = DevCtx::instance().get_cc(device);
+     int* locks = DevCtx::instance().get_locks(device);
+ 
+-    // Launch
++    // Launch. All blocks of the grid must be co-resident for the group barriers, so groups * width <= num_sms.
++    // With a known number of active experts, launch only as many groups as there are experts and widen them to
++    // use the freed SMs, up to MOE_MAX_SMS_PER_EXPERT
+     int block_dim = EXL3_GEMM_BASE_THREADS * MOE_TILESIZE_K / 16;
+     TORCH_CHECK(concurrency * MOE_SMS_PER_EXPERT <= num_sms, "Concurrency too high for device num_sms");
+-    dim3 grid_dim(MOE_SMS_PER_EXPERT, 1, concurrency);
++    int num_groups = MIN((int) concurrency, MOE_MAX_GROUPS);
++    int group_size = MOE_SMS_PER_EXPERT;
++    if (num_active > 0)
++    {
++        num_groups = MIN(num_groups, num_active);
++        group_size = MIN(num_sms / num_groups, MOE_MAX_SMS_PER_EXPERT);
++    }
++    dim3 grid_dim(group_size, 1, num_groups);
+ 
+     int N_off = 0;
+     if (hidden_dim % 256 == 0 && intermediate_dim % 256 == 0) N_off = 1;
+@@ -260,7 +278,7 @@ void exl3_moe
+         (void*) &num_experts,
+         (void*) &num_experts_per_tok,
+         (void*) &max_tokens_per_expert,
+-        (void*) &concurrency,
++        (void*) &num_groups,
+         (void*) &act_limit,
+         (void*) &act_function,
+         (void*) &K_gate,
+--- a/exllamav3/exllamav3_ext/quant/exl3_moe.cuh
++++ b/exllamav3/exllamav3_ext/quant/exl3_moe.cuh
+@@ -41,6 +41,7 @@ void exl3_moe
+     const bool down_mcg,
+     const bool down_mul1,
+ 
+-    const float act_limit
++    const float act_limit,
++    const int num_active
+ );
+ 
+--- a/exllamav3/exllamav3_ext/quant/exl3_moe_common.cuh
++++ b/exllamav3/exllamav3_ext/quant/exl3_moe_common.cuh
+@@ -6,7 +6,8 @@
+ #define MOE_ACT_SILU 0
+ #define MOE_ACT_GELU 1
+ 
+-#define MOE_SMS_PER_EXPERT 8
++#define MOE_SMS_PER_EXPERT 8       // default/minimum group width, also sets max concurrency (buffer count)
++#define MOE_MAX_SMS_PER_EXPERT 32  // widest expert group when few experts are active
+ #define MOE_TILESIZE_K 32
+ #define MOE_TILESIZE_M 16
+ #define MOE_SH_STAGES 3
+--- a/exllamav3/exllamav3_ext/quant/exl3_moe_kernel.cuh
++++ b/exllamav3/exllamav3_ext/quant/exl3_moe_kernel.cuh
+@@ -20,8 +20,10 @@ void exl3_moe_kernel(EXL3_MOE_KERNEL_ARGS)
+ {
+     const int group_idx = blockIdx.z;
+     const int block_idx = blockIdx.x;
++    const int group_size = gridDim.x;  // SMs per expert, set at launch
++    const int num_groups = gridDim.z;
+     const int block_threads = EXL3_GEMM_BASE_THREADS * MOE_TILESIZE_K / 16;  // blockDim.x
+-    const int group_threads = MOE_SMS_PER_EXPERT * block_threads;
++    const int group_threads = group_size * block_threads;
+     const int warp_id = threadIdx.x / 32;
+     const int warps_per_group = group_threads / 32;
+     const int warps_per_block = block_threads / 32;
+@@ -36,9 +38,17 @@ void exl3_moe_kernel(EXL3_MOE_KERNEL_ARGS)
+     // Barriers for group sync
+     int* barrier_counters_sense = locks + BARRIER_LOCKS_OFFSET;
+ 
++    // Expert scheduler state, self-resetting: [0] next ticket, [1] retired groups, [2 + g] ticket for group g
++    int* sched = locks + MOE_SCHED_OFFSET;
++
+     // Individual GEMM barriers per group
+     locks += group_idx * MAX(hidden_dim, intermediate_dim) / 128;
+ 
++    // Dynamic expert assignment: active experts are numbered in scan order, and each group processes the active
++    // expert matching its current ticket. Initial tickets are the group indices; after finishing an expert, a group
++    // draws the next unclaimed ticket, so load balances greedily without assuming uniform cost per expert
++    int ticket = group_idx;
++
+     // Loop over experts
+     int start = 0;
+     int end = 0;
+@@ -55,8 +65,8 @@ void exl3_moe_kernel(EXL3_MOE_KERNEL_ARGS)
+         if (token_count == 0) continue;
+         if (token_count > max_tokens_per_expert) continue;
+ 
+-        // Skip if expert is assigned to different group
+-        if (expert_idx_assign++ % concurrency != group_idx) continue;
++        // Skip if expert is claimed by a different group
++        if (expert_idx_assign++ != ticket) continue;
+ 
+         // EXL3 weights for g, u, d
+         const uint16_t* exp_gate_trellis = gate_trellis[expert_idx];
+@@ -95,7 +105,7 @@ void exl3_moe_kernel(EXL3_MOE_KERNEL_ARGS)
+                     0.088388347648f
+                 );
+             }
+-            group_barrier(group_idx, MOE_SMS_PER_EXPERT, barrier_counters_sense);
++            group_barrier(group_idx, group_size, barrier_counters_sense);
+         };
+ 
+         had_gather_gu_in();
+@@ -145,7 +155,7 @@ void exl3_moe_kernel(EXL3_MOE_KERNEL_ARGS)
+ 
+         gemm_up(temp_state_g, temp_intermediate_g, exp_gate_trellis, K_gate);
+         gemm_up(temp_state_u, temp_intermediate_u, exp_up_trellis, K_up);
+-        group_barrier(group_idx, MOE_SMS_PER_EXPERT, barrier_counters_sense);
++        group_barrier(group_idx, group_size, barrier_counters_sense);
+ 
+         // Output hadamard for g, u + activation+gate + input hadamard for d
+         auto had_guad = [&]()
+@@ -168,7 +178,7 @@ void exl3_moe_kernel(EXL3_MOE_KERNEL_ARGS)
+                     act_function
+                 );
+             }
+-            group_barrier(group_idx, MOE_SMS_PER_EXPERT, barrier_counters_sense);
++            group_barrier(group_idx, group_size, barrier_counters_sense);
+         };
+ 
+         had_guad();
+@@ -217,7 +227,7 @@ void exl3_moe_kernel(EXL3_MOE_KERNEL_ARGS)
+         };
+ 
+         gemm_down(temp_intermediate_g, temp_state_g, exp_down_trellis, K_down);
+-        group_barrier(group_idx, MOE_SMS_PER_EXPERT, barrier_counters_sense);
++        group_barrier(group_idx, group_size, barrier_counters_sense);
+ 
+         // Output hadamard for d + scatter add
+         auto had_d_out = [&]()
+@@ -240,9 +250,30 @@ void exl3_moe_kernel(EXL3_MOE_KERNEL_ARGS)
+                     0.088388347648f * __half2float(weight)
+                 );
+             }
+-            group_barrier(group_idx, MOE_SMS_PER_EXPERT, barrier_counters_sense);
+         };
+ 
+         had_d_out();
++
++        // Draw the next ticket and publish it to the group through the end-of-expert barrier, which also protects
++        // the temp buffers for reuse. Grabbed tickets continue from num_groups since 0..num_groups-1 are implicit
++        if (block_idx == 0 && threadIdx.x == 0)
++            sched[2 + group_idx] = num_groups + atomicAdd(&sched[0], 1);
++        group_barrier(group_idx, group_size, barrier_counters_sense);
++        ticket = sched[2 + group_idx];
++    }
++
++    // Retire group; last group out resets the scheduler for the next launch. The acq_rel increment orders each
++    // group's earlier ticket grabs before the last group's reset (plain atomics are relaxed, so without this a
++    // straggler's in-flight grab could land after the reset and leak into the next launch)
++    if (block_idx == 0 && threadIdx.x == 0)
++    {
++        cuda::atomic_ref<int, cuda::thread_scope_device> next_ticket(sched[0]);
++        cuda::atomic_ref<int, cuda::thread_scope_device> retired_groups(sched[1]);
++        int retired = retired_groups.fetch_add(1, cuda::memory_order_acq_rel);
++        if (retired == num_groups - 1)
++        {
++            next_ticket.store(0, cuda::memory_order_relaxed);
++            retired_groups.store(0, cuda::memory_order_relaxed);
++        }
+     }
+ }
+--- a/exllamav3/modules/block_sparse_mlp.py
++++ b/exllamav3/modules/block_sparse_mlp.py
+@@ -744,6 +744,7 @@ def forward(
+ 
+                 # Run fused path if possible, skips experts with more than TEMP_ROWS_FUSED tokens
+                 if self.fused_mode_buffers is not None:
++                    num_active = sum(1 for c in expert_count_list[:num_ex] if 0 < c <= TEMP_ROWS_FUSED)
+                     ext.exl3_moe(
+                         y,
+                         final_hidden_states,
+@@ -773,7 +774,8 @@ def forward(
+                         self.multi_up.mul1,
+                         self.multi_down.mcg,
+                         self.multi_down.mul1,
+-                        self.act_limit
++                        self.act_limit,
++                        num_active
+                     )
+                     min_rows = TEMP_ROWS_FUSED
+                 else:
