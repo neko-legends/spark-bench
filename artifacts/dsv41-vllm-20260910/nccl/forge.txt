@@ -1,0 +1,13 @@
+INFO 09-10 17:52:58 [pynccl.py:120] vLLM is using nccl==2.30.7
+mode: pynccl (vLLM's NCCL wrapper)
+forge   r0 per-op us, 8KB                       n=  300 p10=   50.82 p50=   52.86 p90=  387.65 max=  707.52 slow(>1.25x p10)= 14%
+forge   r0 per-op us, 32KB                      n=  300 p10=   56.96 p50=   59.10 p90=   63.17 max=  179.84 slow(>1.25x p10)=  4%
+forge   r0 per-op us, 60KB                      n=  300 p10=   63.49 p50=   66.02 p90=   70.27 max=  133.54 slow(>1.25x p10)=  3%
+forge   r0 per-op us, 128KB                     n=  300 p10=   98.78 p50=  102.98 p90=  110.05 max=  143.52 slow(>1.25x p10)=  1%
+forge   r0 per-op us, 256KB                     n=  300 p10=  107.23 p50=  113.22 p90=  141.98 max=  264.77 slow(>1.25x p10)= 12%
+forge   r0 per-op us, 1024KB                    n=  300 p10=  818.72 p50=  840.32 p90=  899.23 max= 1608.99 slow(>1.25x p10)=  2%
+forge   r0 eager step ms, gaps only             n=   40 p10=   52.78 p50=   52.78 p90=   52.81 max=   53.08 slow(>1.25x p10)=  0%
+forge   r0 eager step ms, 88 AR + gaps          n=  150 p10=   57.12 p50=   57.14 p90=   57.30 max=   58.37 slow(>1.25x p10)=  0% | collective cost/step p50=4.36 ms | 1s medians: 57.2 57.2 57.2 57.1 57.1 57.1 57.1 57.1 57.1
+forge   r0 graph step ms, 88 AR + gaps          n=  300 p10=   57.76 p50=   57.98 p90=   58.28 max=   69.16 slow(>1.25x p10)=  0% | collective cost/step p50=5.20 ms | 1s medians: 58.0 58.1 58.0 58.0 58.0 57.9 58.0 58.0 58.0 57.9 57.9 57.9 58.0 57.9 57.9 58.0 57.9 58.0
+forge   r0 graph step ms, 88 AR back-to-back    n= 2000 p10=    5.15 p50=    5.42 p90=    5.69 max=    7.20 slow(>1.25x p10)=  1% | 1s medians: 5.5 5.6 5.5 5.5 5.6 5.5 5.4 5.4 5.2 5.2 5.2
+forge r0 done

@@ -1,0 +1,11 @@
+anvil   r1 per-op us, 8KB                       n=  300 p10=   50.59 p50=   52.80 p90=  380.26 max=  699.01 slow(>1.25x p10)= 15%
+anvil   r1 per-op us, 32KB                      n=  300 p10=   56.74 p50=   58.91 p90=   62.27 max=  181.57 slow(>1.25x p10)=  4%
+anvil   r1 per-op us, 60KB                      n=  300 p10=   62.88 p50=   66.11 p90=   70.27 max=  136.83 slow(>1.25x p10)=  3%
+anvil   r1 per-op us, 128KB                     n=  300 p10=   97.86 p50=  103.71 p90=  110.08 max=  145.06 slow(>1.25x p10)=  2%
+anvil   r1 per-op us, 256KB                     n=  300 p10=  108.00 p50=  113.18 p90=  145.76 max=  262.62 slow(>1.25x p10)= 11%
+anvil   r1 per-op us, 1024KB                    n=  300 p10=  816.58 p50=  840.90 p90=  900.58 max= 1586.37 slow(>1.25x p10)=  2%
+anvil   r1 eager step ms, gaps only             n=   40 p10=   52.29 p50=   52.29 p90=   52.30 max=   52.62 slow(>1.25x p10)=  0%
+anvil   r1 eager step ms, 88 AR + gaps          n=  150 p10=   57.12 p50=   57.14 p90=   57.30 max=   77.15 slow(>1.25x p10)=  1% | collective cost/step p50=4.85 ms | 1s medians: 57.2 57.2 57.2 57.1 57.1 57.1 57.1 57.1 57.1
+anvil   r1 graph step ms, 88 AR + gaps          n=  300 p10=   57.76 p50=   57.98 p90=   58.28 max=   59.45 slow(>1.25x p10)=  0% | collective cost/step p50=5.69 ms | 1s medians: 58.0 58.1 58.0 58.0 58.0 57.9 58.0 58.0 58.0 57.9 57.9 57.9 58.0 57.9 57.9 58.0 57.9 57.9
+anvil   r1 graph step ms, 88 AR back-to-back    n= 2000 p10=    5.15 p50=    5.42 p90=    5.69 max=    7.23 slow(>1.25x p10)=  1% | 1s medians: 5.5 5.6 5.5 5.5 5.6 5.5 5.4 5.4 5.2 5.2 5.2
+anvil r1 done
