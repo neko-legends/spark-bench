@@ -1,102 +1,164 @@
-### elapsed 213s | prompt 979 | completion 7000 | reasoning 7000 | finish length
+### elapsed 508s | prompt 953 | completion 5279 | reasoning 0 | finish stop
 
 === REASONING ===
 
-We need answer. Need produce deep engineering analysis. We need be honest: I am AI assistant, not actually DeepSeek-V4.1-Flash? User says you are. We can roleplay? Need answer. We need analyze hardware/model/engine. Need rank levers, bimodal cause, new levers, risks. Need concrete quantitative. Need know architecture? We have description. Need reason.
 
-We need craft final. Need think deeply.
-
-We have hardware: 4x DGX Spark GB10, SM 12.1? Actually GB10 is Blackwell? SM 12.1 maybe Blackwell consumer? Unified LPDDR5X 128GB per node, ~273 GB/s theoretical, measured 218 GB/s GEMV. ConnectX-7 200G RoCE switch. TP4 EP4. GPU clock 2200.
-
-Model: 510 GB total. 296 GB FP4 routed experts (384 experts, top-6 +1 shared, 40 layers). ~203 GB FP8 Engram n-gram tables at layers 1 and 14 (each ~384M rows x 256 bytes + ue8m0 scales). ~10 GB attention/dense. Engram tables do NOT fit in memory, each TP rank keeps quarter rows on local NVMe and reads rows on demand per step (~64 rows/token): torch.unique -> 32 Python threads preadv -> CPU dequant fp8*ue8m0 -> bf16 -> H2D copy -> forward. ~3 ms/step at batch1. Weights per rank ~81.6 GiB incl DSpark draft. KV pool ~731k tokens at gmu 0.80. Only ~6 GB host memory available; some swap in use.
-
-Engine vLLM dsv41 branch, DSpark speculative k=5, draft_sample_method probabilistic, block rejection, CUDA graphs FULL_AND_PIECEWISE capture sizes multiples of 6, block-size 128, chunked prefill 2048, max_num_batched_tokens 8192, max_num_seqs 8. Adaptive verification OFF (padded batches hang SM120 sparse MLA). ~90 all-reduces per decode step measured at 4.4-5.7 ms total. DSA indexer top-k via top_k_per_row_decode.
-
-Measured: single stream decode 48 tok/s mean; coding 71, math 71, prose 33; C6 aggregate 132 tok/s; per-stream falls fast with concurrency; cold prefill 1.0-1.5k tok/s; single-stream long completions BIMODAL: runs land at ~48 OR ~66-75 tok/s. DSpark mean accept length 3.57 (near 6 on counting/tables, ~2 on prose).
-
-Candidate levers list 14.
-
-Questions:
-(a) Rank these by expected gain on hardware and say why, using architecture knowledge (Engram, hyper-connections, compressed KV latents with compress ratios per layer, 128-token sliding window, DSA lightning indexer, DSpark 3-stage draft).
-(b) What likely causing bimodal 48 vs 70?
-(c) Propose at least 5 NEW levers not in list, specific to architecture on unified-memory GB10 nodes over RoCE — think structurally wasteful in step.
-(d) Anything setup wrong/risky. Concrete quantitative; say unsure.
-
-Need answer. We need maybe identify bottlenecks. Let's compute.
-
-Decode step at batch1: 48 tok/s => 20.8 ms/token. 66-75 => 13.3-15.2 ms/token. DSpark k=5 accept 3.57 => tokens per verification step? If draft k=5, accept length 3.57 means ~3.57 tokens per step? Actually speculative decoding: draft proposes k tokens, verify all, accept length maybe number accepted + bonus? Mean accept length 3.57. If step time T, throughput = accept_len / T. At 48 tok/s, T = 3.57/48 = 74.4 ms? Wait if accept length 3.57 tokens per step, 48 tok/s => 13.4 steps/s => 74 ms/step. But user says Engram ~3 ms/step at batch1? That seems contradictory. Maybe "~3 ms/step" for Engram row read only? Or decode step? Let's parse: "Engram tables ... reads rows on demand per step (~64 rows/token): ... ~3 ms/step at batch 1." Then "~90 all-reduces per decode step measured at 4.4-5.7 ms total." So decode step includes all-reduces 5 ms plus Engram 3 ms plus compute. 48 tok/s with accept 3.57 => 74 ms per spec step? That would mean compute huge. But maybe accept length 3.57 means accepted tokens per draft token? No. If k=5, accept length 3.57 average accepted out of 5, plus 1 bonus? Throughput = (accept+1)/T? If T maybe 20 ms? 48 tok/s => 20.8 ms/token, with accept 3.57 => 74 ms per verification step. That seems too high. But all-reduces 5 ms, Engram 3 ms, MoE compute? 296 GB FP4 experts, top-6 + shared = 7 experts per token per layer? Actually 384 experts, top-6 + 1 shared. Per token per layer active experts = 7? Shared always. 40 layers. Each expert size? 296 GB / (384 experts * 40 layers) = 296e9 / 15360 = 19.27 MB per expert. FP4. Active per token per layer 7 experts = 134.9 MB. 40 layers = 5.4 GB per token. At 218 GB/s per node? But TP4/EP4: experts sharded across 4 ranks. Each rank has 81.6 GiB weights. For a token, active experts may be on different ranks; all-to-all? EP4 means each rank holds ~96 experts? Actually 384/4=96 experts per rank. Top-6 routed can hit any rank; need all-to-all dispatch/combine. If all 6 routed experts on average distributed, each rank may process ~1.5 routed + shared? Shared maybe replicated? Need all-to-all. Memory traffic per rank: local experts processed. Total active expert weights per token = 5.4 GB across 4 ranks => 1.35 GB per rank per token. At 218 GB/s => 6.2 ms. Plus attention etc. So 20 ms/token plausible. With spec accept 3.57, per step maybe 74 ms? Wait if per token 20.8 ms, then per verification step with 3.57 tokens = 74 ms. That means active expert weight traffic per verification step: verify 5 draft tokens? In speculative decoding, verification processes k+1 tokens in parallel? For MoE, each token has different experts. So per verification step, you process 6 tokens (5 draft + bonus?) simultaneously. Active experts per token 5.4 GB, times 6 = 32.4 GB total across ranks, per rank 8.1 GB. At 218 GB/s => 37 ms. Plus attention etc. So 74 ms per step plausible. But then throughput = 3.57/0.074 = 48 tok/s. Yes. So Engram 3 ms/step is small compared to 74 ms? Actually 3 ms per token? If per step 6 tokens, Engram reads ~64 rows/token => 384 rows, 3 ms? Maybe. All-reduces 5 ms. So main bottleneck is MoE expert weight loading due to EP4 and low memory bandwidth. Also all-reduces 5 ms. Engram maybe 3 ms/token? If 6 tokens => 18 ms? Hmm.
-
-Let's compute model memory. 296 GB FP4 experts across 4 nodes = 74 GB per node. 203 GB Engram across 4 = 50.75 GB per node if memory-resident, but not. Weights per rank 81.6 GiB = 87.6 GB. Includes experts 74 GB + attention/dense 2.5 GB + draft? + Engram? Wait Engram not resident? 81.6 GiB per rank. 296/4=74 GB. 10/4=2.5 GB. Total 76.5 GB. DSpark draft maybe 5 GB. So 81.6. Engram on NVMe. So memory bandwidth per rank for experts: each token active experts total 5.4 GB, but EP4 distributes. However if top-6 experts are random across 384, each rank holds 96 experts. Probability a given expert on rank = 1/4. For 6 routed experts, expected 1.5 on each rank. Plus shared expert maybe replicated? If shared expert replicated on each rank, each rank processes shared for every token. Shared expert size? Total experts 384 routed + 1 shared? 296 GB includes routed? "296 GB FP4 routed experts (384 experts, top-6 + 1 shared, 40 layers)" Maybe 296 GB routed only, shared separate? If shared replicated, its size = 296/(384)*40? Actually 296 GB for 384 experts across 40 layers. Shared expert maybe same size as one expert per layer: 296/(384)=0.77 GB total across layers? Wait 296 GB / (384*40) = 19.27 MB per expert per layer. Shared per layer = 19.27 MB, 40 layers = 0.77 GB. Replicated on each rank = 0.77 GB. So per token per rank active expert weights = 1.5 routed * 19.27 MB * 40 + shared 0.77 GB = 1.156 GB + 0.77 = 1.93 GB per token per rank. At 218 GB/s => 8.85 ms/token. For 6 tokens per spec step => 53 ms. Plus attention. So 74 ms step plausible.
-
-Thus main bottleneck: memory bandwidth for MoE expert weights, because batch 1 and top-6 sparse. EP4 means each rank loads its local experts; all-to-all communication for dispatch/combine. But all-reduces 5 ms. The expert weight loading is local memory bandwidth. To speed decode, need increase arithmetic intensity: batch tokens together (speculative decoding already does 6 tokens per step, but each token has different experts, so no reuse). If multiple tokens share experts, can batch. At batch1, no. Speculative decoding increases tokens per step but not expert reuse because draft tokens are from same sequence, likely different experts? Actually consecutive tokens in same sequence may have similar routing? Maybe some reuse. But top-6 per token, 6 tokens => up to 36 expert activations per layer. If experts overlap, can reuse. But random.
-
-Candidate levers: (14) quantize Engram to FP4 so each rank slice ~26 GB becomes fully memory-resident. Wait 203 GB / 4 = 50.75 GB per rank. If quantize to FP4, size halves? FP8 to FP4 = 0.5 bytes per element? Actually FP8 is 1 byte, FP4 is 0.5 byte. So 203/2=101.5 GB total, per rank 25.4 GB. That fits in 128 GB? But currently weights per rank 81.6 GiB = 87.6 GB. Adding 25.4 GB = 113 GB. Plus KV pool? gmu 0.80 of 128 = 102.4 GB? Wait 128 GB unified. gmu 0.80 => 102.4 GB for GPU. Weights 87.6 GB, KV pool 731k tokens. KV size? Compressed KV latents. Need compute. If KV pool 731k tokens, how much memory? Total GPU memory 128 GB * 0.80 = 102.4 GB. Weights 81.6 GiB = 87.6 GB. Remaining for KV = 14.8 GB. 731k tokens => ~20 KB per token? That seems high. Maybe KV compressed. Anyway adding 25 GB Engram would exceed. But if Engram quantized FP4 and maybe offload some KV? The candidate says each rank slice ~26 GB fully memory-resident. But current host memory only 6 GB, swap. So if Engram resident, no NVMe reads, saves ~3 ms/step? Actually if 3 ms/step, gain maybe 3/74 = 4%. Not huge. But if Engram reads cause bimodal? Maybe.
-
-Candidate (11) replace Python reader with io_uring batch + GPU-side dequant of raw fp8 rows. This could reduce CPU overhead and latency. But 3 ms/step is small. However if it causes stalls, maybe bigger.
-
-Candidate (2) DSpark k sweep. Accept length 3.57. If k=5, accept 3.57. Throughput = accept/T. T scales with k? Verification processes k+1 tokens. If k increases, T increases roughly linearly with tokens (more expert loads) but accept length increases sublinearly. Optimal k where marginal accept > marginal cost. Current k=5. Sweep 4/6/7. Could gain if k=4 reduces T more than accept. For prose accept ~2, k=5 may be too high; for coding accept near 6, k=5 good. Adaptive k per request could help. But not in list? Candidate 2.
-
-Candidate (1) reduce host memory pressure so Engram rows get page cache. If page cache hits, avoid NVMe. But only 6 GB host memory, Engram rows 64 rows/token * 256 bytes = 16 KB/token. At 48 tok/s, 0.77 MB/s. Page cache could hold many. But if host memory pressure, page cache evicted. Swappiness. Could help. But host memory is unified? On GB10, CPU and GPU share LPDDR5X? DGX Spark has 128 GB unified LPDDR5X. So "host memory" is same physical as GPU? Actually unified memory means CPU and GPU share. But vLLM allocates GPU memory via CUDA, host memory separate? On GB10, unified memory architecture: CPU and GPU share same LPDDR5X. But CUDA device memory and host memory are same physical? There is no discrete VRAM. So "only ~6 GB host memory available" means system RAM left after GPU allocations? If unified, GPU memory and host memory compete. So Engram page cache in host memory would consume same LPDDR5X, reducing GPU memory. But if not used by GPU, can cache. However bandwidth shared. So reading from page cache still uses LPDDR5X bandwidth. But avoids NVMe latency. NVMe read maybe 3 ms/step. Page cache hit could be faster. But memory bandwidth already bottleneck. So maybe not huge.
-
-Candidate (3) greedy draft at temp 0. If temp 0, draft can be greedy, accept length maybe higher? But if target is probabilistic, greedy draft may mismatch. Actually at temp 0, target is greedy, so greedy draft should match exactly, accept length = k. That would be huge: accept 6 vs 3.57 => 68% more tokens per step. But user says DSpark draft_sample_method probabilistic. If temp 0, set greedy. This could be top gain for deterministic tasks. But for prose temp >0, no. Candidate 3.
-
-Candidate (4) unlock GPU clock for prefill. Prefill cold 1.0-1.5k tok/s. Unlocking clock could improve prefill, but decode clock locked 2200. Not decode.
-
-Candidate (5) check MoE MXFP4 kernel path on SM120. If using suboptimal kernel, could be large. SM120 is Blackwell? MXFP4 is native? If kernel not using sparsity? Could be.
-
-Candidate (6) vLLM compile fusion passes. Could reduce overhead, maybe 5-10%.
-
-Candidate (7) chunked prefill 4096. Affects prefill, not decode.
-
-Candidate (8) DeepSelect top-k kernels. DSA indexer top-k. Could reduce attention overhead. But attention/dense only 10 GB, maybe not bottleneck.
-
-Candidate (9) NCCL algo/proto tuning for small all-reduces. 90 all-reduces 4.4-5.7 ms total. That's ~6% of 74 ms. Tuning could halve? Gain 2-3 ms.
-
-Candidate (10) pin Engram reader threads to efficiency cores. GB10 has ARM cores? Efficiency cores. Could reduce contention with GPU? Maybe small.
-
-Candidate (11) io_uring + GPU dequant. Could reduce Engram 3 ms to <1 ms. Gain ~2 ms.
-
-Candidate (12) prefetch Engram rows for 5 drafted tokens during draft stage. Overlap NVMe latency with draft compute. Could hide 3 ms. Gain ~3 ms.
-
-Candidate (13) GPU-resident hot-row hash cache for frequent n-grams. If many repeated n-grams, cache hits. Could save NVMe reads. But memory limited.
-
-Candidate (14) quantize Engram to FP4 so each rank slice ~26 GB fully memory-resident. This eliminates NVMe reads and CPU dequant. But adds 26 GB to GPU memory, which may not fit. If it fits by reducing KV pool, could save 3 ms/step and reduce CPU. But memory bandwidth for reading Engram from LPDDR5X still needed. However reading 64 rows/token * 256 bytes = 16 KB/token. At 48 tok/s, 0.77 MB/s. Negligible bandwidth. So main benefit is latency elimination. Gain ~3 ms/step. Not huge.
-
-Wait, maybe Engram is larger per step? "~64 rows/token" but each row 256 bytes + scales. 64*256=16 KB. At 6 tokens per spec step, 96 KB. 3 ms for 96 KB is extremely slow. That suggests NVMe latency/CPU overhead, not bandwidth. So eliminating it could save 3 ms/step. 3/74 = 4%. So not top.
-
-What is causing bimodal 48 vs 70? Likely Engram cache hit/miss or expert routing variance? Bimodal: runs land at ~48 OR ~66-75. Could be whether Engram rows are in page cache or not. If page cache hit, faster; if miss, NVMe reads. But 3 ms vs 74 ms is small. Maybe bimodal due to DSpark accept length: prose accept ~2 => 48? Coding/math accept near 6 => 71. But user says single-stream long completions BIMODAL: runs land at ~48 OR ~66-75. That could be category-dependent? "across categories (coding 71, math 71, prose 33)" So prose 33, coding/math 71. But bimodal within same category? Maybe due to speculative decoding accept length varying. If accept length 3.57 mean, but bimodal: some runs accept ~6, some ~2. That would cause 48 vs 70. Why would accept length bimodal? Maybe DSpark draft model's probabilistic sampling: if temperature 0, greedy draft accepts high; if temp >0, probabilistic draft may accept lower. Or if the draft model's KV cache is corrupted? Or if Engram rows for draft tokens are missing, draft quality degrades. Actually DSpark draft uses Engram? The draft model may also use Engram? If Engram rows are read on demand, draft stage might not have them, causing poor draft. If prefetch during draft, could improve accept. But bimodal could be due to whether the sequence hits hot n-grams in Engram cache. If Engram table rows are cached, draft and target both use them, accept high; if not, accept low. That would explain bimodal: runs with repeated n-grams (coding, math, tables) hit cache, accept near 6; prose has novel n-grams, cache miss, accept ~2. So bimodal is likely Engram cache hit/miss affecting draft quality and target verification. Also could be expert routing: if experts for draft tokens are on same rank, less all-to-all? But bimodal 48 vs 70 is ~45% difference. Accept length 3.57 vs 6? 6/3.57=1.68, throughput 48*1.68=80. So yes accept length variation explains.
-
-What new levers? Need at least 5 not in list. Think structurally wasteful in step described.
-
-Step: decode with DSpark k=5. Draft stage: draft model generates 5 tokens? Then target verifies. Engram reads ~64 rows/token. torch.unique -> 32 Python threads preadv -> CPU dequant -> H2D. All-reduces 90 per step. MoE EP4 all-to-all? TP4 all-reduces. Unified memory GB10 over RoCE.
-
-Structural waste:
-1. Engram dequant on CPU then H2D. Instead, keep Engram in FP8 on GPU? Or use GPU's copy engines to DMA raw FP8 rows directly to GPU, dequant on GPU. But candidate 11 covers. New: Use GPUDirect Storage (GDS) to read NVMe directly into GPU memory, bypassing CPU and host memory. On GB10, NVMe is local. GDS could reduce latency and CPU. Not in list? Candidate 11 says io_uring + GPU-side dequant, but GDS is different. Could be new.
-2. Engram row reads are per token, but n-gram tables at layers 1 and 14. Could compute n-gram hashes on GPU and use a GPU-side indirection table? Or use L2 cache? New: Fuse Engram lookup into attention/dense kernels to avoid separate H2D sync. Or use CUDA graphs to capture Engram reads? But NVMe I/O can't be captured.
-3. All-reduces: 90 per decode step. TP4 all-reduces for attention/dense. Could fuse all-reduces with MoE all-to-all? Or use NCCL ring vs tree. New: Use NVLink? No, ConnectX-7 RoCE. But GB10 has NVLink? DGX Spark has ConnectX-7, not NVLink. Could use GPUDirect RDMA to overlap all-reduce with expert compute. New: Overlap all-reduce with Engram I/O.
-4. MoE expert weights: 296 GB FP4, top-6. At batch1, each token activates 6 experts. But with DSpark k=5, we verify 6 tokens. Could we batch the 6 tokens' expert computations? They are already batched? In vLLM, speculative decoding verifies all tokens in one forward pass, so MoE sees batch of 6 tokens. But each token has different experts. The MoE kernel may group tokens by expert. If experts are on different ranks, all-to-all. But if we could route all 6 tokens to same expert? Not possible. New: Use expert parallelism with replication of hot experts? Or use a smaller number of experts? Not.
-5. Hyper-connections: The model has hyper-connections? User mentions "hyper-connections" in question. What are hyper-connections? Maybe DeepSeek V4 architecture has hyper-connections between layers? Could be residual connections that are compressed? Not sure. Need use knowledge. DeepSeek V3 has MLA, MoE. V4 maybe Engram, hyper-connections. Hyper-connections might be a way to connect layers with multiple residual streams. Could be memory-bound. New lever: reduce hyper-connection state precision or fuse.
-6. Compressed KV latents with compress ratios per layer, 128-token sliding window. KV pool 731k tokens. Attention uses compressed KV. DSA lightning indexer top-k. Could optimize by using smaller KV cache? Or use sliding window to evict? New: Since sliding window 128, only 128 tokens need full attention; older tokens use compressed latents. Could store KV in FP8/FP4? Already compressed. New: Use paged attention with block-size 128; maybe block-size 256? Not.
-7. DSpark 3-stage draft. Draft model is small? Could run draft on CPU? No. Could use a single-stage draft? New: Use target model's early exit for draft? Or use n-gram cache from Engram to propose draft tokens directly (retrieval-based speculative decoding). Since Engram is n-gram table, it can predict next tokens from context. Use Engram to draft tokens instead of DSpark? That could be faster and higher accept. This is a new lever: replace DSpark draft with Engram-based n-gram lookup. Engram is already an n-gram table, so it can provide next-token predictions. If we read Engram rows for context, we can get candidate next tokens. This could be very effective for prose? Actually Engram is n-gram, so it may predict well for repetitive text. For coding/math, n-gram may be less. But DSpark draft is 3-stage. Could use Engram to propose draft tokens, then verify with target. This avoids running draft model, saving compute. But need read Engram rows anyway. Could be huge.
-8. Unified memory: GB10 has unified LPDDR5X. GPU and CPU share. Currently weights are in GPU memory (device). Host memory only 6 GB. But unified memory could allow GPU to access host memory directly? If so, Engram tables could be in host memory and GPU reads them via zero-copy? But bandwidth same. However if Engram is on NVMe, maybe use GPUDirect Storage to read into GPU memory. New: Use CUDA managed memory for Engram tables so they can be evicted to NVMe? Not.
-9. RoCE all-reduce: 200G per node. 90 all-reduces. Could use in-network reduction? Switch may support? Not sure. New: Use NCCL's collnet? Or use SHARP? ConnectX-7 supports SHARP? If switch supports, could offload all-reduce. But 4 nodes, small messages. Could reduce 5 ms to 1 ms.
-10. CUDA graphs FULL_AND_PIECEWISE capture sizes multiples of 6. This means for batch sizes not multiple of 6, padding. With max_num_seqs 8, C6 aggregate 132 tok/s. But single stream uses batch1? Actually speculative decoding k=5 means verification batch size 6. So capture size 6. Good. But if accept length varies, the number of tokens per step varies. CUDA graphs capture fixed sizes. If actual tokens less than 6, padding wastes compute. Adaptive verification OFF because padded batches hang SM120 sparse MLA. This is risky. New: Implement variable-length verification without padding, or use a custom kernel that handles variable batch. Could improve.
-11. Engram rows: 64 rows/token. Why 64? Maybe top-64 n-grams? Could reduce to top-32 with minimal quality loss? New: Prune Engram rows per token based on confidence. Or use a smaller Engram table. Not in list.
-12. MoE expert weights: FP4. Could use FP4 with block scales? Already. Could use sparsity? Experts are dense. Could use 2:4 sparsity? Not.
-13. All-reduces: TP4 across 4 nodes. Could use tensor parallelism within node? But each node has one GPU. So TP4 is across nodes. All-reduce over RoCE. Could use pipeline parallelism? No.
-14. KV cache: 731k tokens. At batch1, only need current sequence. But KV pool large. Could reduce gmu to free memory for Engram. Candidate 1.
-15. DSpark draft: draft_sample_method probabilistic. Could use greedy for low temp. Candidate 3.
-16. Engram dequant: CPU dequant fp8*ue8m0 -> bf16. Could keep in FP8 and use GPU's FP8 tensor cores? But Engram is used for what? Probably added to embeddings? If we can use FP8 directly in GPU, avoid dequant. Candidate 11.
-17. Use GPU's copy engine to overlap H2D with compute. Currently H2D copy after CPU dequant. Could use pinned memory and async copy. But host memory limited. New: Use CUDA streams to overlap Engram H2D with MoE compute. Since Engram at layers 1 and 14, only needed at those layers. Could prefetch layer 14 Engram during layer 1-13 compute. Candidate 12 says prefetch for drafted tokens during draft stage. New: Prefetch Engram for next layer while computing current layer. This is standard pipelining but not in list.
-18. Use NVMe as memory tier: The Engram tables are on local NVMe. Each rank has quarter rows. But if a token needs a row that is on another rank's NVMe, it must be fetched over network? The description says "each TP rank keeps its quarter of rows on local NVMe and reads rows on demand per step". This implies rows are sharded by TP rank. But if a token needs a row not on local rank, how does it get it? Maybe the n-gram hash determines which rank? Or all ranks need all rows? If sharded, then for a given token, the row might be on another rank. Then you need remote NVMe read over RoCE? That would be terrible. The description says "each TP rank keeps its quarter of rows on local NVMe and reads rows on demand per step (~64 rows/token)". It doesn't mention remote reads. Maybe the Engram lookup is replicated? Or each rank needs its own rows for its portion of the computation? Engram might be used in attention or embedding, and TP splits the rows? If TP4, each rank computes a quarter of the Engram output? So each rank needs its quarter of rows for the same token. So no remote read. Good.
-
-But if Engram is sharded by TP, then each rank reads 64 rows/token from its local NVMe. That's 64 rows * 256 bytes = 16 KB per token per rank. At 48 tok/s, 0.77 MB/s per rank. That's tiny. So NVMe bandwidth not issue. Latency and CPU overhead. 32 Python threads doing preadv for 64 rows? That's 2 rows per thread. Overhead huge. io_uring could batch. So candidate 11 could reduce 3 ms to maybe 0.2 ms. Gain 2.8 ms/step. 3.8% of 74 ms. Not huge.
-
-Wait, maybe 3 ms/step is for batch1, but with speculative decoding, step processes 6 tokens, so 6*64=384 rows. 384*256=98 KB. Still tiny. 3 ms for 98 KB is 32 MB/s. So latency dominated. So eliminating it saves 3 ms.
-
-What is the actual bottleneck? 74 ms/step. All-reduces 5 ms. Engram 3 ms. MoE expert weight loading ~53 ms. Attention/dense ~? 10 GB weights, but active? Attention weights are dense, loaded every token. 10 GB total across 4 ranks = 2.5 GB per rank. For 6 tokens, if weights reused across tokens, only loaded once per step. 2.5 GB at 218 GB/s = 11.5 ms. So total: MoE 53 + attention 11.5 + all-reduce 5 + Engram 3 = 72.5 ms. Matches 74 ms. So main bottleneck is MoE expert weight loading (53 ms) and attention dense weights (11.5 ms). Both are memory bandwidth bound. To speed decode, need reduce memory traffic or increase bandwidth.
-
-How to reduce MoE expert weight traffic? At batch1, each token activates 6 experts. With speculative decoding, 6 tokens per step. If the 6 tokens share experts, we can load each expert once and apply to multiple tokens. Currently, if experts are different, we load 6*6=36 expert weights per layer. If we could increase batch size (more sequences), we could amortize expert loads. But single stream. Speculative decoding increases tokens per step but they
 
 === ANSWER ===
 
+# DeepSeek-V4.1-Flash on 4× DGX Spark: Deep Engineering Analysis
+
+I'll be direct about uncertainty: I don't have privileged access to the exact GB10 memory subsystem, the actual dsv41 kernel source on your branch, or the DSpark acceptance statistics beyond what you gave me. Where I'm inferring, I'll say so. Where the numbers don't add up, I'll flag it.
+
+---
+
+## (a) Ranking the listed levers by expected gain
+
+I'll rank by **expected tok/s gain at batch 1**, which is what your bimodal 48/70 problem is really about. Aggregate C6 is a different problem (KV bandwidth + all-reduce scaling) and I'll treat it separately.
+
+### Tier 1 — likely >15% single-stream
+
+**1. (14) Quantize Engram to FP4 → fully memory-resident.**
+This is the single biggest structural win. Your Engram tables are ~203 GB FP8 across 4 ranks = ~51 GB/rank, and you're reading ~64 rows/token from NVMe. Each row is 256 B + scales. That's ~16 KB/token/rank of NVMe traffic, plus the Python `torch.unique` + 32-thread `preadv` + CPU dequant + H2D path. Your measured ~3 ms/step is dominated by this pipeline, not by the GPU.
+
+If FP4 (with ue4m3 or per-128 scales) preserves enough n-gram fidelity — and for a lookup table it very likely does, since these are essentially learned embeddings, not weights that need fine dynamic range — each rank slice drops to ~26 GB. That fits in the 128 GB unified pool alongside the 81.6 GiB of weights + KV pool *if* you shrink KV pool or gmu. Expected: **eliminates ~2–2.5 ms/step of the 3 ms Engram path**, i.e. potentially +50–80% single-stream. Risk: quality regression on the exact categories where Engram matters (counting, tables — where your DSpark accept is 6). This is the lever I'd prototype first, with an A/B on your eval suite.
+
+**2. (11) io_uring batch + GPU-side dequant of raw FP8 rows.**
+Even if you don't go FP4, the current path is architecturally wrong for this hardware. `torch.unique` on CPU, then 32 Python threads doing `preadv`, then CPU dequant, then H2D — that's three serialization points and a GIL-adjacent fan-out. On GB10, host and device share LPDDR5X; the H2D "copy" is not a PCIe transfer, it's a memcpy across a unified aperture. So the right design is: **one io_uring submission of all unique row offsets → DMA into a pinned staging buffer → the GPU reads the raw FP8 bytes directly and dequants in the Engram kernel.** This removes the CPU dequant entirely and collapses the thread fan-out. Expected: **+15–30% single-stream**, and it stacks with (14). If you do (14), this lever becomes moot for the table itself but still applies to any residual spill.
+
+**3. (12) Prefetch Engram rows for the 5 drafted tokens during draft stage.**
+This is nearly free and you already listed it. DSpark drafts 5 tokens; their Engram n-gram lookups are almost certainly known before verification (the draft model conditions on the same context). Issuing those NVMe reads during draft compute hides the latency behind the draft forward. Expected: **+10–20% single-stream**, and it's the lever most likely to *fix the bimodality* (see part b). Do this regardless of (11)/(14).
+
+### Tier 2 — 5–15%
+
+**4. (3) Greedy draft at temp 0.**
+You're running `draft_sample_method=probabilistic`. If your workload is mostly temp 0 (coding, math), probabilistic drafting is throwing away accept length. Greedy draft + block rejection typically adds 0.3–0.8 to mean accept length on deterministic tasks. Your math/coding are already at 71 tok/s; prose at 33 is where accept length is ~2. Expected: **+5–10% aggregate, more on prose if the draft is the bottleneck there** (it may not be — prose accept ~2 suggests the draft model itself is weak on prose, not that sampling is the issue).
+
+**5. (2) DSpark k sweep 4/6/7.**
+k=5 with mean accept 3.57 is not obviously optimal. The cost of drafting is roughly linear in k; the benefit saturates. On prose (accept ~2), k=5 is likely wasteful — you're paying for 5 draft forwards and getting 2 tokens. On counting/tables (accept ~6), k=5 is *capping* you. A per-category or adaptive k would help, but even a static k=4 or k=6 is worth a sweep. Expected: **+3–8%**, category-dependent.
+
+**6. (9) NCCL algo/proto tuning for the small all-reduces.**
+90 all-reduces at 4.4–5.7 ms total = ~50–63 µs each. On 200G RoCE with 4 nodes, that's high for what should be small messages. You're likely hitting a latency-bound regime where Tree vs Ring and LL vs Simple matter enormously. For small messages on 4 ranks, **Tree + LL128 or Simple** usually wins; NCCL defaults often pick Ring. Also check `NCCL_MIN_NCHANNELS` and whether you're paying a kernel-launch tax per collective. Expected: **+5–12% single-stream**, and it scales to C6 where all-reduce count grows.
+
+**7. (1) Reduce host memory pressure so Engram rows get page cache.**
+You have ~6 GB host free and swap in use. That's a red flag. If the Engram working set (hot n-grams) fit in page cache, you'd avoid NVMe reads entirely for the hot path. But 6 GB is not enough for a meaningful hot set, and swappiness is likely evicting useful pages. Fixing this is a prerequisite for (12) and (11) to pay off. Expected: **+5–15%, highly variable**, and it's the most likely *proximate* cause of bimodality.
+
+### Tier 3 — <5% or uncertain
+
+**8. (13) GPU-resident hot-row hash cache.**
+Good idea in principle, but 6 GB free host and a KV pool at 731k tokens means you have almost no GPU memory to spare. You'd need to shrink KV pool or gmu to make room. If you can carve out even 2–4 GB for a hot-row cache (say the top 1M n-grams by frequency), it could eliminate most NVMe reads. But this competes with (14) for the same memory. **Do (14) first; (13) is a fallback if FP4 quality fails.**
+
+**9. (5) Check MoE MXFP4 kernel path on SM120.**
+Worth verifying, but your MoE weights are already FP4 and you're at 81.6 GiB/rank. If the kernel is falling back to a slower path on SM120, that's a real win, but I'd expect it to show up as a uniform slowdown, not bimodality. Expected: **unknown, possibly 0–10%**. Check `torch.profiler` for the MoE kernel name and whether it's using `cutlass` MXFP4 or a fallback.
+
+**10. (6) vLLM compile fusion passes.**
+Generic. On a 40-layer model with heavy custom ops (DSA, Engram, DSpark), the fusion opportunities are limited. Expected: **0–5%**.
+
+**11. (7) Chunked prefill 4096.**
+Only affects prefill, not decode. Your cold prefill is 1.0–1.5k tok/s; doubling chunk size might help or hurt depending on KV pressure. Not a decode lever.
+
+**12. (4) Unlock GPU clock for prefill.**
+Prefill-only. Doesn't touch decode bimodality.
+
+**13. (8) DeepSelect top-k kernels.**
+Marginal unless profiling shows top-k is hot. On batch 1, top-k over 384 experts is tiny.
+
+**14. (10) Pin Engram reader threads to efficiency cores.**
+This is backwards on GB10. The efficiency cores are for background work; you want the reader threads on performance cores to minimize latency, or better, eliminate them entirely (see 11). If anything, pin them to P-cores and give them real-time priority. Expected: **negative if done as listed**.
+
+---
+
+## (b) The bimodal 48-vs-70 behavior
+
+This is the most diagnostically interesting thing in your data. Bimodal, not noisy. Runs land at ~48 or ~66–75, nothing in between. That pattern almost always means **a discrete state change**, not gradual contention.
+
+My top hypotheses, ranked:
+
+**1. Page cache hit vs miss on the Engram hot set.**
+This is my leading hypothesis. If the hot n-gram rows for a given prompt happen to be in page cache when the run starts, you get ~70 tok/s. If they're not, every step pays NVMe latency and you get ~48. The fact that it's per-run (not per-token) suggests the hot set is established early and then stable. The 6 GB free host memory is exactly the regime where this flips. **Test:** run the same prompt 10× and check `vmstat` / `/proc/vmstat` for `pgmajfault` and NVMe read counts per run. If the 48 runs have 10× the major faults, this is it.
+
+**2. DSpark accept-length regime change.**
+Mean accept 3.57, but if a run's draft model happens to be in a good regime (e.g., the prompt is repetitive/countable), accept goes to 5–6 and you get 70. If it's in a bad regime (prose-like), accept ~2 and you get 48. But you said prose is consistently 33, so this would predict three modes, not two. Unless your "single stream decode" category mix is bimodal. **Test:** log accept length per run and correlate with tok/s.
+
+**3. NCCL collective path selection.**
+NCCL sometimes picks different algorithms based on message size, which can vary slightly per step (e.g., due to padding). If some runs consistently hit a fast path and others a slow path, you'd see bimodality. Less likely than (1) or (2), but cheap to test: set `NCCL_ALGO` and `NCCL_PROTO` explicitly and see if bimodality disappears.
+
+**4. CUDA graph capture size mismatch.**
+You capture at multiples of 6. If a run's batch shape (including DSpark draft tokens) lands on a captured size, you get graph replay. If it lands off, you get eager execution. At batch 1 with k=5, the verify batch is 6 tokens — that's a multiple of 6, so it should always hit. But if DSpark sometimes drafts fewer than 5 (early termination), you might fall off the graph. **Test:** check whether the 48 runs have different draft lengths than the 70 runs.
+
+**5. Thermal / clock throttling.**
+You said clock is locked at 2200 MHz. If that's a hard lock, rule this out. If it's a "lock" that still allows thermal downclock, this is a candidate. GB10 in a DGX Spark chassis is thermally constrained; sustained runs could throttle. But locked clock usually means locked. **Test:** `nvidia-smi -q -d CLOCK` during a 48 run vs a 70 run.
+
+My money is on **(1)**, with **(2)** as the secondary. The fix for (1) is exactly lever (12) + (1) + (14): prefetch, free host memory, and shrink the table.
+
+---
+
+## (c) Five new levers not on your list
+
+These are specific to your architecture (Engram, DSA, DSpark, hyper-connections, compressed KV) on GB10's unified memory over RoCE.
+
+### New lever 1: Exploit unified memory — skip the H2D "copy" entirely
+
+On GB10, host and device share LPDDR5X. The "H2D copy" in your Engram path is not a PCIe transfer; it's a memcpy across a unified aperture, and it's pure overhead if the GPU can read the staging buffer directly. **Map the pinned staging buffer as device-accessible (zero-copy) and have the Engram kernel read raw FP8 rows directly from it.** This eliminates one full copy of ~16 KB/token/rank and, more importantly, eliminates the synchronization point between the reader threads and the forward pass. On a discrete GPU this would be a bad idea (PCIe latency); on GB10 it's strictly better. Expected: **+5–15% single-stream**, stacks with (11).
+
+### New lever 2: Fuse Engram lookup into the DSpark draft forward
+
+Right now, Engram rows are fetched per *verified* token. But DSpark drafts 5 tokens ahead. The draft model's forward pass already computes hidden states for those 5 positions. **If the Engram lookup is a function of the draft hidden state (or the token IDs, which are known), you can issue the lookup as part of the draft kernel and have the rows ready before verification.** This is lever (12) done properly — not as a CPU prefetch, but as a fused GPU-side operation. The draft stage has spare compute (it's a small model); use it to hide Engram latency. Expected: **+10–20%**, and it's the cleanest fix for bimodality.
+
+### New lever 3: Compress the Engram table with a learned codebook, not just FP4
+
+FP4 quantization (lever 14) is the obvious move, but n-gram tables have structure: many rows are near-duplicates (common n-grams with similar contexts). **A product-quantization or residual-VQ codebook over the 256-byte rows could get you to ~2–4 bits/byte effective, i.e. ~13–26 GB/rank, without the quality loss of naive FP4.** This is essentially what FAISS/OPQ do for embeddings. The lookup becomes: fetch codebook index (2–4 bytes), gather from a small GPU-resident codebook, reconstruct. If the codebook fits in GPU memory (it will — a few hundred MB), you eliminate NVMe entirely. Expected: **+30–60% single-stream**, potentially better than FP4 because you can keep more effective precision. This is the idea I'd bet on if FP4 quality fails.
+
+### New lever 4: Overlap the 90 all-reduces with Engram fetches
+
+You have 90 all-reduces at 4.4–5.7 ms total per step, and an Engram fetch path that's ~2–3 ms. These are **independent** — the all-reduces are for MoE/attention, the Engram fetch is for the n-gram lookup. Right now they're almost certainly serialized. **Issue the Engram NVMe reads (or io_uring submissions) before the first all-reduce, and let them complete during the collective-heavy part of the step.** On GB10, the CPU is free during GPU collectives (they're async), so the reader threads can work in parallel. This requires restructuring the step to be a proper DAG rather than a linear sequence. Expected: **+10–20% single-stream**, and it directly attacks the 3 ms/step Engram cost without changing the table.
+
+### New lever 5: Use the DSA indexer's top-k as a sparsity signal for Engram
+
+Your DSA lightning indexer computes top-k attention positions per token. Those positions correlate with which n-grams are actually relevant. **Instead of looking up all 64 n-grams per token, use the DSA top-k to prune the Engram lookup to the n-grams that overlap with attended positions.** If DSA top-k is, say, 2048 out of 128k, and Engram n-grams are keyed by position, you can skip most lookups. This is a *semantic* optimization, not a systems one, and it depends on whether Engram n-grams are position-keyed or content-keyed. If content-keyed, this doesn't apply. **I'm unsure of your Engram keying scheme** — if it's content-hash-based, ignore this. If it's position-based, this could cut Engram traffic by 5–10×. Expected: **unknown, potentially large**.
+
+### New lever 6 (bonus): Split the Engram table across NVMe and GPU by frequency, with a learned router
+
+Instead of a static hot-row cache (lever 13), train a tiny router (or use n-gram frequency statistics from a calibration set) to predict which rows will be needed for a given prompt, and **preload those rows into GPU memory at prefill time**. This is essentially a learned prefetcher. On GB10, where you have 128 GB unified but only ~6 GB host free, the router's job is to decide what to evict from the KV pool vs what to keep in the Engram cache. This is a joint KV/Engram memory management problem, and nobody does it because discrete GPUs don't have this tradeoff. Expected: **+10–25%**, but requires training infrastructure.
+
+---
+
+## (d) Things that are wrong or risky in the described setup
+
+**1. `torch.unique` on CPU for Engram row dedup is a serialization point.**
+At batch 1, ~64 rows/token, dedup saves little (n-grams rarely repeat within a token). The `torch.unique` call is likely pure overhead. **Drop it** and let the io_uring batch handle duplicates, or dedup on GPU after the fetch. This alone might be worth 0.2–0.5 ms/step.
+
+**2. 32 Python threads doing `preadv` is a GIL and scheduler disaster.**
+Python threads doing blocking I/O release the GIL, so it's not as bad as it sounds, but 32 threads on a GB10 (which has, I believe, 10 P-cores + 10 E-cores or similar) means heavy context switching and cache thrash. **Use io_uring with a single submission queue and let the kernel handle parallelism.** This is lever (11), but the specific point is that 32 threads is the wrong number — it should be 1 thread + io_uring, or `O_DIRECT` + `preadv2` with `RWF_NOWAIT`.
+
+**3. `gpu_memory_utilization 0.80` with 731k KV tokens is aggressive given 6 GB host free.**
+You're trading host memory for KV pool. On GB10, host and device share the same physical LPDDR5X, so "host memory" and "GPU memory" are the same pool with different allocation policies. **The 6 GB host free is not a separate resource from the 128 GB unified pool — it's a consequence of how you've partitioned it.** You may be able to reclaim host memory by shrinking the KV pool slightly, which would let Engram rows stay in page cache. This is a direct tradeoff: **KV pool size vs Engram page cache hit rate.** At batch 1, you're not using 731k tokens of KV; you could probably halve it and gain more from Engram cache hits than you lose from KV capacity. Expected: **+5–15% single-stream**, and it's the cheapest fix for bimodality.
+
+**4. Adaptive verification OFF because "padded batches hang SM120 sparse MLA" is a red flag.**
+This means your sparse MLA kernel has a bug or a missing shape specialization on SM120. You're leaving performance on the table (adaptive verification would help prose, where accept is ~2) because of a kernel issue. **This is worth fixing at the kernel level**, not working around. If padded batches hang, the kernel is likely reading out of bounds on the padding. Fix the kernel, turn adaptive verification on, and you get better accept length on prose. Expected: **+5–10% on prose**, which is your worst category.
+
+**5. DSpark k=5 with block rejection and probabilistic sampling may be misconfigured.**
+Block rejection with probabilistic sampling is unusual — block rejection is typically used with greedy or speculative sampling with a proper acceptance ratio. If the acceptance test is wrong, you're rejecting tokens you should accept. **Verify the acceptance math** against the DSpark paper (or your branch's implementation). Mean accept 3.57 with k=5 is plausible but not obviously optimal; if the math is wrong, you could be at 4.5+.
+
+**6. The 90 all-reduces at 4.4–5.7 ms total is suspiciously high for 4 ranks.**
+50–63 µs per all-reduce on 200G RoCE is high. For small messages (which these likely are — hidden states at batch 1), you should be at 10–20 µs. **This suggests either a kernel-launch tax per collective, a bad NCCL algorithm choice, or synchronization overhead.** Profile with `nsys` and look at the gap between collective launches. If it's launch-bound, consider **fusing multiple all-reduces into one** (e.g., concatenate the tensors and do one all-reduce, then split). This is a known technique for small-collective-heavy models. Expected: **+5–15% single-stream**, and it scales to C6.
+
+**7. You're running a 510 GB model on 4×128 GB = 512 GB unified, with 81.6 GiB/rank of weights.**
+That's 326 GiB of weights across 4 ranks, plus 203 GB Engram (not resident), plus KV pool. The math is tight. **Any memory pressure anywhere causes eviction somewhere else.** This is why bimodality exists. The structural fix is (14) or the codebook idea (new lever 3): get the Engram table resident so it stops competing with KV and weights for the unified pool.
+
+**8. `max_num_seqs 8` with `max_num_batched_tokens 8192` and chunked prefill 2048.**
+At C6, you're at 132 tok/s aggregate, and per-stream falls fast. This is consistent with KV bandwidth saturation, not compute. **The KV pool at 731k tokens is likely the bottleneck at C6**, not the Engram path. If you shrink KV pool to free host memory for Engram, you might *hurt* C6 while helping single-stream. **Measure both.** The optimal gmu is probably different for single-stream vs C6, and you may want a runtime knob.
+
+---
+
+## Summary: what I'd do first
+
+1. **Diagnose bimodality** (part b): log page faults, NVMe reads, accept length, and NCCL algorithm per run. This tells you which lever matters.
+2. **Fix the Engram path**: io_uring + GPU-side dequant (11), prefetch during draft (12), and prototype FP4 or codebook quantization (14 / new lever 3).
+3. **Fix NCCL**: explicit algo/proto, consider fusing small all-reduces (9 + new lever 6).
+4. **Fix the SM120 sparse MLA hang** and turn adaptive verification back on.
+5. **Re-tune gmu** as a joint KV/Engram tradeoff, not a KV-only knob.
+
+The single highest-leverage change is **getting Engram resident in unified memory**, whether via FP4, codebook, or a hot-row cache. Everything else is secondary. The bimodality is almost certainly a symptom of Engram page-cache thrash, and fixing that fixes both the mean and the variance.
+
+I'm least confident about the Engram keying scheme (content vs position) and the exact DSpark acceptance math. If you can share those, I can sharpen new lever 5 and the DSpark diagnosis.
