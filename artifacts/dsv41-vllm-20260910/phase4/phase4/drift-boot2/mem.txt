@@ -1,0 +1,40 @@
+== drift-boot2 start
+               total        used        free      shared  buff/cache   available
+Mem:             121         113           4           7          12           8
+SwapTotal:      16777212 kB
+SwapFree:       15827412 kB
+== anvil
+               total        used        free      shared  buff/cache   available
+Mem:             121         111          10           7           8          10
+SwapTotal:      16777212 kB
+SwapFree:       16567524 kB
+== ember
+               total        used        free      shared  buff/cache   available
+Mem:             121         111           6           7          12           9
+SwapTotal:      16777212 kB
+SwapFree:       16547020 kB
+== flame
+               total        used        free      shared  buff/cache   available
+Mem:             121         111           4           7          13           9
+SwapTotal:      16777212 kB
+SwapFree:       16542272 kB
+== drift-boot2 end
+               total        used        free      shared  buff/cache   available
+Mem:             121         116           3           7          11           5
+SwapTotal:      16777212 kB
+SwapFree:       15835492 kB
+== anvil
+               total        used        free      shared  buff/cache   available
+Mem:             121         114           4           7          10           6
+SwapTotal:      16777212 kB
+SwapFree:       16571632 kB
+== ember
+               total        used        free      shared  buff/cache   available
+Mem:             121         114           1           7          13           6
+SwapTotal:      16777212 kB
+SwapFree:       16549852 kB
+== flame
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           1           7          13           6
+SwapTotal:      16777212 kB
+SwapFree:       16547120 kB

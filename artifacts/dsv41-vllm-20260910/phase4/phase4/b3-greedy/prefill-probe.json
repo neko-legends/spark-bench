@@ -1,0 +1,24 @@
+{
+ "label": "b3-greedy",
+ "seed": 1,
+ "rows": [
+  {
+   "target": 8000,
+   "prompt_tokens": 11700,
+   "ttft_s": 10.072,
+   "prefill_tok_s": 1161.6
+  },
+  {
+   "target": 32000,
+   "prompt_tokens": 46711,
+   "ttft_s": 42.949,
+   "prefill_tok_s": 1087.6
+  },
+  {
+   "target": 100000,
+   "prompt_tokens": 145884,
+   "ttft_s": 140.266,
+   "prefill_tok_s": 1040.1
+  }
+ ]
+}

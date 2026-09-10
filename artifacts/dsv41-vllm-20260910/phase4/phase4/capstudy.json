@@ -1,0 +1,82 @@
+[
+ {
+  "c": 1,
+  "prompt_tokens": 1998,
+  "agg_tok_s": 45.9,
+  "per_stream_median": 61.21,
+  "per_stream_min": 61.21,
+  "ttft_mean_s": 1.411,
+  "kv_before": null,
+  "kv_after": null
+ },
+ {
+  "c": 2,
+  "prompt_tokens": 1998,
+  "agg_tok_s": 63.64,
+  "per_stream_median": 42.515,
+  "per_stream_min": 37.73,
+  "ttft_mean_s": 1.97,
+  "kv_before": null,
+  "kv_after": null
+ },
+ {
+  "c": 4,
+  "prompt_tokens": 1998,
+  "agg_tok_s": 71.75,
+  "per_stream_median": 33.98,
+  "per_stream_min": 33.52,
+  "ttft_mean_s": 6.662,
+  "kv_before": null,
+  "kv_after": null
+ },
+ {
+  "c": 6,
+  "prompt_tokens": 1998,
+  "agg_tok_s": 99.25,
+  "per_stream_median": 26.39,
+  "per_stream_min": 18.13,
+  "ttft_mean_s": 4.954,
+  "kv_before": null,
+  "kv_after": null
+ },
+ {
+  "c": 8,
+  "prompt_tokens": 1998,
+  "agg_tok_s": 85.54,
+  "per_stream_median": 16.56,
+  "per_stream_min": 13.22,
+  "ttft_mean_s": 7.594,
+  "kv_before": null,
+  "kv_after": null
+ },
+ {
+  "c": 1,
+  "prompt_tokens": 99938,
+  "agg_tok_s": 3.43,
+  "per_stream_median": 62.56,
+  "per_stream_min": 62.56,
+  "ttft_mean_s": 70.575,
+  "kv_before": null,
+  "kv_after": null
+ },
+ {
+  "c": 2,
+  "prompt_tokens": 99938,
+  "agg_tok_s": 3.34,
+  "per_stream_median": 26.455,
+  "per_stream_min": 3.62,
+  "ttft_mean_s": 114.805,
+  "kv_before": null,
+  "kv_after": null
+ },
+ {
+  "c": 4,
+  "prompt_tokens": 99938,
+  "agg_tok_s": 3.42,
+  "per_stream_median": 2.58,
+  "per_stream_min": 1.18,
+  "ttft_mean_s": 187.384,
+  "kv_before": null,
+  "kv_after": null
+ }
+]
