@@ -1,0 +1,70 @@
+# DSV41 vLLM Phase 3 STATUS
+
+## Stage
+S1 prep (started)
+
+## Started
+2026-09-10 (phase-3 worker spawn)
+
+## Log
+- S1.1 verified: no dsv41-rank* containers running on any node; ~116-117 GB free/node.
+- Tony repo cloned on forge: /home/jun/dsv41-vllm/tony @ ca662ac35193c69ace9cee37f13a94abf2eff0fc (boot 10).
+- Base images verified to exist on Docker Hub: nightly-8a728663... and deepseekv41-flash-0909-arm64.
+- vllm dsv41-feat branch exists upstream (head e47aa780).
+
+## Phase 3 (vLLM) — S1 prep
+- 2026-09-10: SGLang containers down on all nodes (verified, ~117 GB free). Repo rsynced to anvil/ember/flame. vllm dsv41-feat source cloned on forge (e47aa780) → /home/jun/dsv41-vllm/vllm-src.
+- GPU slow-state probe (idle, all 4 concurrently, 80s): ALL FAST, zero flips. gemv_cont p50 217-219 GB/s, mm_duty 81-84 TFLOPS, clocks 2171-2190 MHz under load, 18-25 W. Outputs: /home/jun/dsv41-vllm/gpuflip/flip-<node>.txt + flipsum: shared 60s all-fast 60s / slow 0s. (Tony issue #1 data point: no slow state observed on this fleet with clock lock active.)
+- Base image pull of vllm/vllm-openai:nightly-8a728663... started on all 4 nodes.
+
+## S2 image chain (COMPLETE, ~25 min, no wedge)
+- overlay1 built per node: base vllm/vllm-openai:nightly-8a728663c1c3... + dsv41-feat python tree (e47aa780) + _C_stable_libtorch rebuilt sm_121a (82/82 steps, 29MB .so). overlay1 forge fad2073af1e6.
+- overlay3 (FlashInfer 0.7.0rc1 07869c61 pinned submodules), overlay4 (mxfp8_gemm_cutlass_sm120 prebuilt, MAX_JOBS=4, minAvail ~90GiB — no boot-3 wedge), overlay5 (sparse_mla rebuilt under runtime env). Final tagged local/vllm-dsv41:overlay5 + vllm-dsv41:overlay5.
+- Image IDs differ per node (node-local builds, expected): forge 1efef58714e9, anvil 61d5b829c1b2, ember ffaf91bab36e, flame 2fcf9e4c0260. All 23.3GB.
+- Runtime no-JIT check on each node: mxfp8 build_and_load 1.4s (ninja no-op), sparse_mla 0.0s. NOTE: verify5.py prints "MISS" for mxfp8 — try_load() in flashinfer 0.7.0rc1 always returns None for JIT specs; the real gate (no compile at runtime) passes, matching Tonys doc 1.5s, no compile.
+
+## S2 image chain (COMPLETE, ~25 min, no wedge)
+- overlay1 built per node: base vllm/vllm-openai:nightly-8a728663c1c3... + dsv41-feat python tree (e47aa780) + _C_stable_libtorch rebuilt sm_121a (82/82 steps, 29MB .so). overlay1 forge fad2073af1e6.
+- overlay3 (FlashInfer 0.7.0rc1 07869c61 pinned submodules), overlay4 (mxfp8_gemm_cutlass_sm120 prebuilt, MAX_JOBS=4, minAvail ~90GiB - no boot-3 wedge), overlay5 (sparse_mla rebuilt under runtime env). Final tagged local/vllm-dsv41:overlay5 + vllm-dsv41:overlay5.
+- Image IDs differ per node (node-local builds, expected): forge 1efef58714e9, anvil 61d5b829c1b2, ember ffaf91bab36e, flame 2fcf9e4c0260. All 23.3GB.
+- Runtime no-JIT check on each node: mxfp8 build_and_load 1.4s (ninja no-op), sparse_mla 0.0s. NOTE: verify5.py prints "MISS" for mxfp8 - try_load() in flashinfer 0.7.0rc1 always returns None for JIT specs; the real gate (no compile at runtime) passes, matching Tony's doc "1.5s, no compile".
+
+## S3 patches + launcher + pre-launch (COMPLETE)
+- Patches staged ~/patches/dsv41-boot10/ on all 4 nodes, 8 files, md5-verified identical to Tony patch/README.md (c0329107/0a14bee6/7e1027f1/da9ef196/af0f8447/cc419353/a9b73756/79a774bc).
+- Launcher: forge:/home/jun/launch-dsv41-vllm-tp4.sh — Tony boot10 config translated to our fabric (rail B, GID auto, local model on every rank, no NFS/no ENGRAM_LOCAL), stop-all-head-first, disarmed boot -> API -> spec gate -> arm unless-stopped. Image-ID check relaxed to warn (node-local builds differ).
+- NCCL 4-node collective check (nccl_lat.py, pynccl, our env): all ranks lockstep, 60KB p50 66us, collective cost/step 4.4-5.7 ms, 0% slow steps. Outputs: /home/jun/dsv41-vllm/nccl/.
+- gpuflip pre-launch: all 4 fast again, zero slow seconds. /home/jun/dsv41-vllm/gpuflip/flip-*-preboot.txt.
+
+## S4 boot + gates (COMPLETE — ALL GATES PASS, DSpark ON)
+- Two launcher bugs fixed en route: JSON args ({image:4}, speculative-config) lost quotes when baked into the per-rank script via heredoc -> defined at runtime in generated script now; added head-container-death early exit. Logs: /home/jun/dsv41-vllm/logs/boot1b-launch.log.
+- Boot: workers 3,2,1 then head 0; load 48 shards 40s/rank + DSpark draft second pass; autotune ~4 min; API up ~15 min. Spec gate PASS (39 spec metrics, SpecDecoding log lines), armed unless-stopped.
+- Engram DISK mode per rank: contiguous distinct ranges layer1 [0/96M/192M/288M, ...] — rank-offset fix confirmed on all 4 ranks.
+- GATES (all on DSpark k=5 + CUDA graphs, MAXLEN=131072):
+  1. Arithmetic 19+23: PASS (content "42", finish stop, reasoning_tokens 0)
+  2. JSON schema: PASS ({'answer': 42})
+  3. **Tool round-trip (phase-1 SGLang corruption repro): PASS CLEAN — lookup_fixture {'key':'alpha'} parsed (vLLM deepseek_v41 parser does NOT drop string=-less params), continuation "The value for key **alpha** is **42**.", finish stop. No </tool_result> runaway. HEADLINE: DSpark corruption was SGLang-side, not model-bound.**
+  4. corrcheck 7/7 PASS
+  5. NIAH 32k 6/6 + 100k 6/6 PASS
+  6. Vision: PASS on content ("A red circle on the left and a blue square on the right."); NOTE image_tokens field not exposed by vLLM usage (prompt_tokens 905 = ~891 img + 14 text)
+  7. 5-min C4 soak: PASS (122 reqs, 0 fail, 304s; worker used-mem deltas <= ~150MB flat; forge swap 938MB steady)
+
+## S5 benches (COMPLETE, all on 131k boot, DSpark k=5, clocks locked 2177-2190MHz, no slow state)
+- Tony-comparable (v41bench.py, prompts-v1, temp 0, thinking off, usage-block tokens, warmup first):
+  C1 agg 42.96 / per-stream 48.24 (Tony boot10: 37.95/43.12); C6 agg 132.01 (Tony: 131.86); C1 code 70.59 (Tony 73.8);
+  prefill cold 2k/8k/32k/64k = 1079/811/1524/1448 tok/s (Tony 902/1026/1539/1194). Files: /home/jun/dsv41-vllm/bench/bench-phase3-131k.{json,md}
+- V4-Flash-comparable: bench-decode.py C1 record protocol (2048 tok): median 62.88 tok/s client wall (n=10, sd 10.07, min 47.6 max 74.8; V4 Flash record: 136 median).
+  bench-depth.py: 5k median 41.8, 10k median 42.6 tok/s; C4 aggregate 136.7 tok/s (4 streams). Log: bench-depth-131k.log.
+- DSpark acceptance: v41bench window mean 4.12 tok/step (156 windows); C1 record protocol window p50 5.24 (min 3.10 max 5.73).
+- Telemetry: anvil/ember/flame CSVs (2s samples): clocks pinned 2177-2190 MHz p10-p90, power p50 ~10W idle / max 36-42W decode. forge sampler lost to a redirect bug (script wrote to /dev/null); fixed (tel-sample2.sh) and restarted. GPU slow state: NOT observed at any point (idle flips x2 + locked clocks + no dips).
+- Per-rank weights with DSpark draft: 81.58 GiB (matches Tony boot10). CUDA graphs captured (PIECEWISE 15).
+
+## S6 final state (COMPLETE — LEFT RUNNING)
+- Relaunched at MAXLEN=300000 (Tony serving config): API up ~19:46Z, KV pool 1,374,757 tokens (4.58x at 300k; Tony 1,070,168/3.57x), weights 81.58 GiB/rank with DSpark draft, CUDA graphs captured. Spec gate PASS, all 4 ranks armed unless-stopped.
+- Re-gates on 300k boot: arithmetic 42 PASS; tool round-trip PASS clean; corrcheck 7/7 PASS; NIAH ok:true; count-to-100 after idle 80.3 tok/s, back-to-back 83.6 (correct 1..100 both).
+- Boot-to-boot drift (C1 v41bench): 131k boot agg 42.96/48.24 vs 300k boot 43.04/48.71 — within 1%. File: bench/bench-phase3-300k-c1.{json,md}
+- Node memory with world serving: ~5-6 GiB MemAvailable per node (same shape as Tony boot10 and our SGLang p2 under load); docker --memory 112g not hit; swap: forge ~0.9GB (pre-existing), workers ~0.2GB.
+- Launcher default MAXLEN now 300000 (serving config). Final world: vllm_dsv41 x4 (forge/anvil/ember/flame), http://192.168.10.1:8000/v1, deepseek-v4.1-flash.
+- Telemetry samplers stopped (CSVs kept in /home/jun/dsv41-vllm/bench/).
+
+## FINAL
+Phase 3 COMPLETE (REPORT.md written). World serving: vllm_dsv41 x4, http://192.168.10.1:8000/v1, deepseek-v4.1-flash, 300k context, DSpark k=5 live. All gates PASS with spec ON.
