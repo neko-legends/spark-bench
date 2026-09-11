@@ -1,0 +1,45 @@
+# /etc/systemd/system/dsv41-world.service  — DRAFT, NOT INSTALLED.
+#
+# DSV4.1-Flash TP4 vLLM world auto-recovery on boot.
+#
+# INSTALL ON FORGE ONLY. The recovery script reaches the workers over the
+# 192.168.10.0/24 fabric and start/stops the head rank locally; running this
+# unit on a worker would fight the head. Do not install it on anvil/ember/flame.
+#
+# Install (after the tuning campaign is over, not during it):
+#   sudo cp /home/jun/git/spark-bench/scripts/dsv41-world.service /etc/systemd/system/dsv41-world.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now dsv41-world.service
+#   systemctl status dsv41-world.service
+#
+# Test: reboot one worker (e.g. anvil), wait, then confirm the world returns:
+#   ssh anvil sudo reboot
+#   curl -s http://192.168.10.1:8000/v1/models | grep deepseek-v4.1-flash
+# The unit's ExecStartPre delay lets the fabric and the workers' clock-lock
+# services come up before the launcher starts; the launcher itself is already
+# idempotent (stop head-first → disarmed boot → API + spec gate → arm).
+#
+# systemd-analyze verify will warn that ExecStart's script is not a packaged
+# binary and that /etc/systemd/system is not the repo copy — expected for a draft.
+
+[Unit]
+Description=DeepSeek-V4.1-Flash TP4 vLLM world recovery (forge head; run on forge only)
+Documentation=file:/home/jun/git/spark-bench/docs/dsv41-vllm-tp4.md
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Give the switch/fabric, the workers, and spark-gpu-clock-lock time to settle
+# after a cold boot before the launcher's preflight runs.
+ExecStartPre=/bin/sleep 45
+ExecStart=/home/jun/git/spark-bench/scripts/dsv41-recover.sh
+TimeoutStartSec=2700
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dsv41-world
+
+[Install]
+WantedBy=multi-user.target
