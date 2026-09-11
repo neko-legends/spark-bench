@@ -1,9 +1,10 @@
 # spark-bench
 
-> ### 4 DGX Sparks. Three model lanes. One shared TP4 cluster.
+> ### 4 DGX Sparks. Four model lanes. One shared TP4 cluster.
+> **DeepSeek V4.1 Flash · native FP4/FP8, 420k context:** **51.1 tok/s C1 mean** across eight task categories (**61–73 tok/s on code and math**), **~105 tok/s aggregate at four streams**, DSpark k=5 with greedy draft — 510 GB of weights made to fit by keeping the 203 GB Engram tables on local NVMe per rank (2026-09-10 PDT snapshot; final campaign tables pending).
 > **Qwen 3.8 Flash Next · official NVIDIA NVFP4:** **91.3 tok/s single-stream code** and **600.5 tok/s aggregate at 16 streams** with MTP k=4 + GEMV (2026-09-06 PDT upgrade; medians of three repeats).
 > Native **262,144-token context**, **4.02M-token bf16 KV pool**. Preliminary workload-specific results—not a throughput guarantee.
-> **→ [Qwen configs & measurements](#qwen-3-8-flash)** · [GLM archive](#glm-5-3-flash) · [DeepSeek archive](#deepseek-v4-flash)
+> **→ [DeepSeek V4.1 configs & measurements](#deepseek-v4-1-flash)** · [Qwen configs & measurements](#qwen-3-8-flash) · [GLM archive](#glm-5-3-flash) · [DeepSeek V4 archive](#deepseek-v4-flash)
 
 Running big MoE models across **four NVIDIA DGX Sparks** (GB10) as one TP=4
 world over a switched CX-7 RoCE fabric — the recipes, the launchers, the
@@ -15,6 +16,7 @@ prerequisites, reproduction limits and operator/agent handoff instructions:
 
 | Lane | Stack | Status | Headline (this cluster) |
 |---|---|---|---|
+| **[DeepSeek V4.1 Flash](#deepseek-v4-1-flash)** | vLLM · native FP4 experts / FP8 dense · TP4+EP · DSpark k=5 greedy draft · Engram on NVMe · 420k ctx | **serving · campaign in progress** (`forge:8000`) | 51.1 tok/s C1 mean (code 61–71, math 73) · ~105 tok/s aggregate @4 · cold prefill ~1.5k tok/s · sequence cap 4 |
 | **[Qwen 3.8 Flash Next](#qwen-3-8-flash)** | vLLM · official NVIDIA NVFP4 · TP4+EP · MTP k=4 + GEMV · 262k ctx | **serving · campaign-qualified, not production-qualified** (`forge:8000`) | 91.3 tok/s C1 code · 600.5 tok/s aggregate @16; C1 prose −7.9% vs fresh k2 baseline |
 | **[GLM 5.3 Flash](#glm-5-3-flash)** | vLLM · EXL3 4bpw · DFlash2 · 1M ctx | stopped; recipe and results retained | 128.9 tok/s 4-stream agg · 1560 tok/s cold prefill @100k · 96 tok/s structured C1 |
 | **[DeepSeek V4 Flash](#deepseek-v4-flash)** | vLLM · abliterated NVFP4 · MTP | recipe kept, not serving | 136 tok/s C1 median (145.5 peak) · 290.3 engine record · 182 tok/s C4 |
@@ -26,6 +28,66 @@ configuration, not the model.
 
 Newest results are at the top of each lane; older ones follow in reverse
 chronological order. Every number carries its date, its ruler, and its config.
+
+---
+
+<a id="deepseek-v4-1-flash"></a>
+
+## DeepSeek V4.1 Flash — 4× DGX Spark
+
+**In plain English:** a 510 GB frontier MoE serving on four Sparks, at **51 tok/s for one
+person** on mixed tasks (**61–73 tok/s when the task is code, math or tables**), **~105 tok/s
+aggregate across four concurrent streams**, with **420k context**, tools and vision on. Written
+answers are fast; the *waiting* is the weak spot — cold prefill runs ~1.0–1.5k tok/s, so a
+100k-token prompt costs ~70 s before the first token.
+
+> **Snapshot notice (2026-09-10):** the tuning campaign is still running. Numbers below are the
+> current champion, not the frozen publish table. Final tables (six-arm comparison, A/B/A
+> verification, depth map, 30–60 min soak) land in
+> [the full section](docs/dsv41-vllm-tp4.md) when the campaign closes.
+
+![Champion stats table: DeepSeek-V4.1-Flash on 4× DGX Spark, vLLM TP4 — config, throughput, per-category, speculation and prefill](docs/images/dsv41-vllm-tp4-champion-table-2026-09-10.webp)
+
+### Current champion numbers
+
+All rows: temperature 0, thinking off, after warmup, batch 1, on `DRAFT_METHOD=greedy` +
+DSpark k=5, `MAXLEN=430080` (420k). Method and raw files:
+[`artifacts/dsv41-vllm-20260910/`](artifacts/dsv41-vllm-20260910/) ·
+[full section](docs/dsv41-vllm-tp4.md).
+
+| metric | value | conditions |
+|---|---:|---|
+| C1 per-stream decode — **8-category mean** | **51.1 tok/s** | medians of three reps (47.5 / 51.1 / 51.1); short prompts, Tony prompt set v1 |
+| C1 per-stream — **math** | **72.9 tok/s** | median across reps; single reps vary ±10% |
+| C1 per-stream — **coding** | **70.8 tok/s** | median; the same category read 61.4 in one rep — quote the median, or say "single run" |
+| C1 per-stream — **prose / narrative** | 29.1 / 23.6 tok/s | prose is the weak category: DSpark accepts only ~2 tok/step there |
+| C4 per-stream / aggregate | 30.8 / **104.5 tok/s** | four concurrent streams, same prompt set |
+| C6 aggregate | ~132 tok/s | six streams; parity with tonyd2wild's boot-10 (131.86) on identical hardware |
+| C1 record protocol (`bench-decode`, 2048-token completions) | 72.4 tok/s median (min 67.4) | greedy; the 48-tok/s mode seen with probabilistic drafting is gone |
+| cold prefill (unique prefix) | 1,494 / 1,521 / 1,520 / 1,447 / 1,186 tok/s | 2k / 8k / 32k / 64k / 100k prompts |
+| DSpark acceptance | 4.36 mean tok/step · 67% rate | median 5.02, n=71 windows; ~6 on counting/tables, ~2 on prose |
+| KV pool | 1,530,285 tokens in the 430,080 window (3.56×) | GMU 0.80, block 128 |
+| advertised sequence cap | **4** | C4 = 56% of C1 per-stream; C6 43%; C8 27% — aggregate peaks around C6 |
+| weights per rank | 81.58 GiB | incl. DSpark draft layers; model load 273 s |
+
+**Honest comparisons.** Our own **V4 Flash** on the same fabric did **136 tok/s C1 best-case**,
+66–93 at real chat depth and 182 at C4 — so **V4.1 Flash is slower than V4 Flash on this
+hardware**, despite the greedy-draft gain. It is a bigger MoE with heavier routing and two
+Engram lookups per step that V4 Flash does not have. Quote the model, not just the cluster.
+
+### How it fits on four Sparks at all
+
+The checkpoint is 510 GB: 296 GB FP4 routed experts, ~203 GB of **FP8 Engram n-gram tables**
+(2 layers × ~384M rows × 256 B), ~10 GB attention/dense. With 128 GB unified memory per node,
+the experts split fine — the Engram tables do not. They stay in the safetensors files on each
+node's NVMe and each TP rank reads **its own quarter** of the rows on demand, dequantising on
+the CPU and staging into the forward pass before it runs. That trick is
+[tonyd2wild's + Kai's](https://github.com/tonyd2wild/DeepSeek-V4.1-Flash-vLLM-DGX-Spark), and
+it's what makes the difference between "does not fit" and 51 tok/s.
+
+Run it yourself: [recipe and findings](docs/dsv41-vllm-tp4.md) — image chain, the eight
+bind-mounted patches, launcher env, fabric + clock-lock requirements, and
+[`scripts/dsv41-recover.sh`](scripts/dsv41-recover.sh) for the node-reboot case.
 
 ---
 
