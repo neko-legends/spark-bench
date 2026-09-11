@@ -17,7 +17,7 @@ prerequisites, reproduction limits and operator/agent handoff instructions:
 | Lane | Stack | Status | Headline (this cluster) |
 |---|---|---|---|
 | **[DeepSeek V4.1 Flash](#deepseek-v4-1-flash)** | vLLM · native FP4 experts / FP8 dense · TP4+EP · DSpark k=5 greedy draft · Engram on NVMe · 420k ctx | **serving · campaign in progress** (`forge:8000`) | 51.1 tok/s C1 mean (code 61–71, math 73) · ~105 tok/s aggregate @4 · cold prefill ~1.5k tok/s · sequence cap 4 |
-| **[Qwen 3.8 Flash Next](#qwen-3-8-flash)** | vLLM · official NVIDIA NVFP4 · TP4+EP · MTP k=4 + GEMV · 262k ctx | **serving · campaign-qualified, not production-qualified** (`forge:8000`) | 91.3 tok/s C1 code · 600.5 tok/s aggregate @16; C1 prose −7.9% vs fresh k2 baseline |
+| **[Qwen 3.8 Flash Next](#qwen-3-8-flash)** | vLLM · official NVIDIA NVFP4 · TP4+EP · MTP k=4 + GEMV · 262k ctx | **stopped 2026-09-10** (world moved to DeepSeek V4.1 Flash); recipe and results retained | 91.3 tok/s C1 code · 600.5 tok/s aggregate @16; C1 prose −7.9% vs fresh k2 baseline |
 | **[GLM 5.3 Flash](#glm-5-3-flash)** | vLLM · EXL3 4bpw · DFlash2 · 1M ctx | stopped; recipe and results retained | 128.9 tok/s 4-stream agg · 1560 tok/s cold prefill @100k · 96 tok/s structured C1 |
 | **[DeepSeek V4 Flash](#deepseek-v4-flash)** | vLLM · abliterated NVFP4 · MTP | recipe kept, not serving | 136 tok/s C1 median (145.5 peak) · 290.3 engine record · 182 tok/s C4 |
 
@@ -160,8 +160,11 @@ the official NVIDIA checkpoint, first served **2026-09-05**. One vLLM endpoint
 at `forge:8000`, **TP4 + expert parallel**, one NVMe checkpoint copy per node,
 CX-7 RoCE between all four GB10s. No checkpoint conversion or TP2 pairs.
 
-**Status: serving, with stability testing in progress.** The benchmarks below
-are preliminary; long-run stability and production qualification are not yet established.
+**Status: stopped 2026-09-10**, when the cluster world moved to DeepSeek V4.1 Flash; the
+recipe, launcher and results are retained and it can be relaunched from
+`~/qwen38-tuning-20260906/rollback-serve.sh`. It was campaign-qualified, not
+production-qualified: the benchmarks below are preliminary, and long-run stability was never
+the gate that got exercised.
 
 ### Tested configurations and measurements (2026-09-05, archived k2 results)
 
