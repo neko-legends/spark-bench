@@ -1,7 +1,7 @@
 # spark-bench
 
 > ### 4 DGX Sparks. Four model lanes. One shared TP4 cluster.
-> **DeepSeek V4.1 Flash · native FP4/FP8, 420k context:** **51.1 tok/s C1 mean** across eight task categories (**61–73 tok/s on code and math**), **~105 tok/s aggregate at four streams**, DSpark k=5 with greedy draft — 510 GB of weights made to fit by keeping the 203 GB Engram tables on local NVMe per rank (2026-09-10 PDT snapshot; final campaign tables pending).
+> **DeepSeek V4.1 Flash · native FP4/FP8, 420k context:** **51.1 tok/s C1 mean** across eight task categories (**61–73 tok/s on code and math**), **~105 tok/s aggregate at four streams**, DSpark k=5 with greedy draft — 510 GB of weights made to fit by keeping the 203 GB Engram tables on local NVMe per rank (2026-09-10 PDT, final tables, A/B/A-verified).
 > **Qwen 3.8 Flash Next · official NVIDIA NVFP4:** **91.3 tok/s single-stream code** and **600.5 tok/s aggregate at 16 streams** with MTP k=4 + GEMV (2026-09-06 PDT upgrade; medians of three repeats).
 > Native **262,144-token context**, **4.02M-token bf16 KV pool**. Preliminary workload-specific results—not a throughput guarantee.
 > **→ [DeepSeek V4.1 configs & measurements](#deepseek-v4-1-flash)** · [Qwen configs & measurements](#qwen-3-8-flash) · [GLM archive](#glm-5-3-flash) · [DeepSeek V4 archive](#deepseek-v4-flash)
@@ -41,10 +41,13 @@ aggregate across four concurrent streams**, with **420k context**, tools and vis
 answers are fast; the *waiting* is the weak spot — cold prefill runs ~1.0–1.5k tok/s, so a
 100k-token prompt costs ~70 s before the first token.
 
-> **Snapshot notice (2026-09-10):** the tuning campaign is still running. Numbers below are the
-> current champion, not the frozen publish table. Final tables (six-arm comparison, A/B/A
-> verification, depth map, 30–60 min soak) land in
-> [the full section](docs/dsv41-vllm-tp4.md) when the campaign closes.
+> **Final tables (2026-09-10 PDT).** Campaign closed with a six-boot A/B/A verification:
+> baseline (probabilistic draft, batch 8192) → champion (greedy, batch 16384) → baseline again.
+> Verdict: **the two configs are indistinguishable** — decode 66.1 / 74.6 / 74.1 tok/s across
+> A1/B/A2, accept length 4.34/4.29/4.31 — while identical configs differ by +11% across boots.
+> The rig boots bimodally (~65 vs ~74 tok/s decode) and that boot-lottery, not any knob, was
+> behind the day's apparent gains. Numbers below are the verified final boot. Warm the world
+> after any relaunch before trusting a measurement.
 
 ![DeepSeek-V4.1-Flash on 4× DGX Spark: 51.1 tok/s single stream mean, 105 tok/s across 4 streams, 4.36 tokens accepted per step, and how the 510 GB fits](docs/images/dsv41-vllm-tp4-x-card-2026-09-10.png)
 
@@ -57,22 +60,23 @@ DSpark k=5, `MAXLEN=430080` (420k). Method and raw files:
 
 | metric | value | conditions |
 |---|---:|---|
-| C1 per-stream decode — **8-category mean** | **51.1 tok/s** | medians of three reps (47.5 / 51.1 / 51.1); short prompts, Tony prompt set v1 |
-| C1 per-stream — **math** | **72.9 tok/s** | median across reps; single reps vary ±10% |
-| C1 per-stream — **coding** | **70.8 tok/s** | median; the same category read 61.4 in one rep — quote the median, or say "single run" |
-| C1 per-stream — **prose / narrative** | 29.1 / 23.6 tok/s | prose is the weak category: DSpark accepts only ~2 tok/step there |
-| C4 per-stream / aggregate | 30.8 / **104.5 tok/s** | four concurrent streams, same prompt set |
-| C6 aggregate | ~132 tok/s | six streams; parity with tonyd2wild's boot-10 (131.86) on identical hardware |
-| C1 record protocol (`bench-decode`, 2048-token completions) | 72.4 tok/s median (min 67.4) | greedy; the 48-tok/s mode seen with probabilistic drafting is gone |
-| cold prefill (unique prefix) | 1,494 / 1,521 / 1,520 / 1,447 / 1,186 tok/s | 2k / 8k / 32k / 64k / 100k prompts |
-| DSpark acceptance | 4.36 mean tok/step · 67% rate | median 5.02, n=71 windows; ~6 on counting/tables, ~2 on prose |
+| C1 per-stream decode — **8-category mean** | **50.5 tok/s** | verified final boot; short prompts, Tony prompt set v1 |
+| C1 per-stream — **math / coding / format** | **70.0 / 71.4 / 71.2 tok/s** | the strong categories; counting ceiling reads 83.2 |
+| C1 per-stream — **reasoning / json** | 58.6 / 45.3 tok/s | |
+| C1 per-stream — **prose / summary / narrative** | 31.7 / 27.9 / 27.7 tok/s | the weak categories: DSpark accepts only ~2 tok/step there |
+| C4 per-stream / aggregate | 31.6 / **109.4 tok/s** | four concurrent streams, same prompt set |
+| C6 aggregate | **136.7 tok/s** | six streams; above tonyd2wild's boot-10 (131.86) on identical hardware |
+| C1 record protocol (`bench-decode`, 2048-token completions) | 74.6 tok/s median (72.7–76.4) | fast-boot mode; slow boots read ~65 — boot bimodality, config-independent |
+| decode at depth 5k / 10k | 44.2 / 44.3 tok/s | mild depth cost, no collapse |
+| cold prefill (unique prefix) | 1,659 / 1,477 / 1,495 / 1,431 / 1,416 tok/s | 2k / 8k / 32k / 64k / 100k prompts |
+| DSpark acceptance | 4.3–4.8 mean tok/step · 66–75% rate | workload-dependent; ~6 on counting/tables, ~2 on prose |
 | KV pool | 1,530,285 tokens in the 430,080 window (3.56×) | GMU 0.80, block 128 |
 | advertised sequence cap | **4** | C4 = 56% of C1 per-stream; C6 43%; C8 27% — aggregate peaks around C6 |
 | weights per rank | 81.58 GiB | incl. DSpark draft layers; model load 273 s |
 
 **Honest comparisons.** Our own **V4 Flash** on the same fabric did **136 tok/s C1 best-case**,
 66–93 at real chat depth and 182 at C4 — so **V4.1 Flash is slower than V4 Flash on this
-hardware**, despite the greedy-draft gain. It is a bigger MoE with heavier routing and two
+hardware**. It is a bigger MoE with heavier routing and two
 Engram lookups per step that V4 Flash does not have. Quote the model, not just the cluster.
 
 ### How it fits on four Sparks at all
