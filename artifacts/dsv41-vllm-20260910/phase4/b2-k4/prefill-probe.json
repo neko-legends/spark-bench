@@ -1,0 +1,24 @@
+{
+ "label": "b2-k4",
+ "seed": 1,
+ "rows": [
+  {
+   "target": 8000,
+   "prompt_tokens": 11699,
+   "ttft_s": 8.06,
+   "prefill_tok_s": 1451.4
+  },
+  {
+   "target": 32000,
+   "prompt_tokens": 46710,
+   "ttft_s": 39.41,
+   "prefill_tok_s": 1185.2
+  },
+  {
+   "target": 100000,
+   "prompt_tokens": 145883,
+   "ttft_s": 103.905,
+   "prefill_tok_s": 1404.0
+  }
+ ]
+}

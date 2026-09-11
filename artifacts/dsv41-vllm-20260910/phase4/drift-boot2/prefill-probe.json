@@ -1,0 +1,18 @@
+{
+ "label": "drift-boot2",
+ "seed": 7,
+ "rows": [
+  {
+   "target": 8000,
+   "prompt_tokens": 11669,
+   "ttft_s": 9.467,
+   "prefill_tok_s": 1232.7
+  },
+  {
+   "target": 32000,
+   "prompt_tokens": 46801,
+   "ttft_s": 30.839,
+   "prefill_tok_s": 1517.6
+  }
+ ]
+}

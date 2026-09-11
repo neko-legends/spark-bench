@@ -1,0 +1,24 @@
+{
+ "label": "b6-fusion",
+ "seed": 1,
+ "rows": [
+  {
+   "target": 8000,
+   "prompt_tokens": 11699,
+   "ttft_s": 8.922,
+   "prefill_tok_s": 1311.2
+  },
+  {
+   "target": 32000,
+   "prompt_tokens": 46710,
+   "ttft_s": 35.486,
+   "prefill_tok_s": 1316.3
+  },
+  {
+   "target": 100000,
+   "prompt_tokens": 145883,
+   "ttft_s": 150.813,
+   "prefill_tok_s": 967.3
+  }
+ ]
+}

@@ -1,0 +1,40 @@
+== b6-fusion start
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           2           7          12           5
+SwapTotal:      16777212 kB
+SwapFree:       15817960 kB
+== anvil
+               total        used        free      shared  buff/cache   available
+Mem:             121         114           4           7          11           7
+SwapTotal:      16777212 kB
+SwapFree:       16556660 kB
+== ember
+               total        used        free      shared  buff/cache   available
+Mem:             121         114           1           7          13           6
+SwapTotal:      16777212 kB
+SwapFree:       16549244 kB
+== flame
+               total        used        free      shared  buff/cache   available
+Mem:             121         114           1           7          14           6
+SwapTotal:      16777212 kB
+SwapFree:       16548928 kB
+== b6-fusion end
+               total        used        free      shared  buff/cache   available
+Mem:             121         116           1           7          13           5
+SwapTotal:      16777212 kB
+SwapFree:       15828952 kB
+== anvil
+               total        used        free      shared  buff/cache   available
+Mem:             121         114           3           7          11           7
+SwapTotal:      16777212 kB
+SwapFree:       16559296 kB
+== ember
+               total        used        free      shared  buff/cache   available
+Mem:             121         113           1           7          14           7
+SwapTotal:      16777212 kB
+SwapFree:       16550800 kB
+== flame
+               total        used        free      shared  buff/cache   available
+Mem:             121         114           2           7          12           7
+SwapTotal:      16777212 kB
+SwapFree:       16551736 kB

@@ -1,0 +1,40 @@
+== b2-k4 start
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           2           7          12           5
+SwapTotal:      16777212 kB
+SwapFree:       15823236 kB
+== anvil
+               total        used        free      shared  buff/cache   available
+Mem:             121         114           4           7          11           7
+SwapTotal:      16777212 kB
+SwapFree:       16546996 kB
+== ember
+               total        used        free      shared  buff/cache   available
+Mem:             121         114           2           7          13           7
+SwapTotal:      16777212 kB
+SwapFree:       16549472 kB
+== flame
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           1           7          13           6
+SwapTotal:      16777212 kB
+SwapFree:       16543060 kB
+== b2-k4 end
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           1           7          13           6
+SwapTotal:      16777212 kB
+SwapFree:       15833928 kB
+== anvil
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           1           7          13           6
+SwapTotal:      16777212 kB
+SwapFree:       16554568 kB
+== ember
+               total        used        free      shared  buff/cache   available
+Mem:             121         114           1           7          14           7
+SwapTotal:      16777212 kB
+SwapFree:       16562000 kB
+== flame
+               total        used        free      shared  buff/cache   available
+Mem:             121         114           1           7          14           6
+SwapTotal:      16777212 kB
+SwapFree:       16554852 kB
