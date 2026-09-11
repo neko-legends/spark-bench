@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#0d1117"/>
+  <rect x="0" y="0" width="1600" height="6" fill="#3fb950"/>
+  <text x="70" y="106" font-family="DejaVu Sans, sans-serif" font-size="45" font-weight="bold" fill="#e6edf3">DeepSeek-V4.1-Flash</text>
+  <text x="70" y="152" font-family="DejaVu Sans, sans-serif" font-size="27" fill="#8b949e">~510 GB MoE · 4× DGX Spark (GB10) · vLLM TP4+EP · 420k ctx · tools + vision on</text>
+
+  <text x="70" y="245" font-family="DejaVu Sans, monospace" font-size="24" fill="#7d8590">single stream</text>
+  <text x="70" y="325" font-family="DejaVu Sans, sans-serif" font-size="96" font-weight="bold" fill="#3fb950">51.1</text>
+  <text x="70" y="364" font-family="DejaVu Sans, sans-serif" font-size="26" fill="#8b949e">tok/s, mean of 8 categories</text>
+
+  <text x="600" y="245" font-family="DejaVu Sans, monospace" font-size="24" fill="#7d8590">4 streams</text>
+  <text x="600" y="325" font-family="DejaVu Sans, sans-serif" font-size="96" font-weight="bold" fill="#58a6ff">105</text>
+  <text x="600" y="364" font-family="DejaVu Sans, sans-serif" font-size="26" fill="#8b949e">tok/s across 4 streams · 30.8 each</text>
+
+  <text x="1145" y="245" font-family="DejaVu Sans, monospace" font-size="24" fill="#7d8590">per step</text>
+  <text x="1145" y="325" font-family="DejaVu Sans, sans-serif" font-size="96" font-weight="bold" fill="#d29922">4.36</text>
+  <text x="1145" y="364" font-family="DejaVu Sans, sans-serif" font-size="26" fill="#8b949e">tokens accepted (DSpark)</text>
+
+  <line x1="70" y1="400" x2="1530" y2="400" stroke="#21262d" stroke-width="2"/>
+
+  <text x="70" y="450" font-family="DejaVu Sans, monospace" font-size="23" fill="#7d8590">tok/s by task, single stream</text>
+  <g font-family="DejaVu Sans, sans-serif" font-size="29" fill="#e6edf3">
+    <text x="70" y="500">math</text>          <text x="430" y="500" text-anchor="end" font-weight="bold" fill="#3fb950">74.3</text>
+    <text x="70" y="539">tables / format</text><text x="430" y="539" text-anchor="end" font-weight="bold" fill="#3fb950">77.6</text>
+    <text x="70" y="578">coding</text>        <text x="430" y="578" text-anchor="end" font-weight="bold" fill="#3fb950">70.8</text>
+    <text x="70" y="617">reasoning</text>     <text x="430" y="617" text-anchor="end">55.0</text>
+    <text x="70" y="656">json</text>          <text x="430" y="656" text-anchor="end">43.8</text>
+    <text x="70" y="695">summary</text>       <text x="430" y="695" text-anchor="end">29.0</text>
+    <text x="70" y="734">prose</text>         <text x="430" y="734" text-anchor="end" fill="#f0883e">33.1</text>
+    <text x="70" y="773">narrative</text>     <text x="430" y="773" text-anchor="end" fill="#f0883e">25.4</text>
+  </g>
+  <text x="70" y="812" font-family="DejaVu Sans, sans-serif" font-size="22" fill="#6e7681">one representative run · temp 0 · thinking off</text>
+
+  <text x="600" y="450" font-family="DejaVu Sans, monospace" font-size="23" fill="#7d8590">how it fits on 4 Sparks</text>
+  <g font-family="DejaVu Sans, sans-serif" font-size="26" fill="#c9d1d9">
+    <text x="600" y="500">296 GB FP4 experts — split over 4 ranks</text>
+    <text x="600" y="540">203 GB FP8 Engram tables — stay on local</text>
+    <text x="600" y="580">NVMe; each rank reads its own quarter of</text>
+    <text x="600" y="620">rows on demand, ~64 rows per token</text>
+    <text x="600" y="660">~10 GB attention / dense / vision</text>
+  </g>
+  <text x="600" y="706" font-family="DejaVu Sans, monospace" font-size="23" fill="#7d8590">speculation</text>
+  <g font-family="DejaVu Sans, sans-serif" font-size="26" fill="#c9d1d9">
+    <text x="600" y="746">DSpark k=5, greedy draft · 4.36 tok/step</text>
+    <text x="600" y="786">median 5.02 · 67% per-position accept</text>
+  </g>
+
+  <line x1="70" y1="845" x2="1530" y2="845" stroke="#21262d" stroke-width="2"/>
+  <text x="70" y="883" font-family="DejaVu Sans, monospace" font-size="23" fill="#7d8590">snapshot 2026-09-10 · final campaign tables pending · github.com/neko-legends/spark-bench</text>
+</svg>

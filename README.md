@@ -46,7 +46,7 @@ answers are fast; the *waiting* is the weak spot — cold prefill runs ~1.0–1.
 > verification, depth map, 30–60 min soak) land in
 > [the full section](docs/dsv41-vllm-tp4.md) when the campaign closes.
 
-![Champion stats table: DeepSeek-V4.1-Flash on 4× DGX Spark, vLLM TP4 — config, throughput, per-category, speculation and prefill](docs/images/dsv41-vllm-tp4-champion-table-2026-09-10.webp)
+![DeepSeek-V4.1-Flash on 4× DGX Spark: 51.1 tok/s single stream mean, 105 tok/s across 4 streams, 4.36 tokens accepted per step, and how the 510 GB fits](docs/images/dsv41-vllm-tp4-x-card-2026-09-10.png)
 
 ### Current champion numbers
 

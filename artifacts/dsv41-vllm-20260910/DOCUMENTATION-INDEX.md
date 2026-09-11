@@ -83,3 +83,4 @@ whatever the remaining arms land.
 |---|---|
 | `docs/images/dsv41-vllm-tp4-dashboard-2026-09-10.webp` | live DGX-dash view: 81 tok/s single stream, 300 peak, all four nodes, model deepseek-v4.1-flash |
 | `docs/images/dsv41-vllm-tp4-champion-table-2026-09-10.webp` | the champion-stats table (config + throughput + per-category + speculation + prefill) — legible README "results" image |
+| `docs/images/dsv41-vllm-tp4-x-card-2026-09-10.png` | purpose-built 1600×900 result card (used in the README and the X post). Source SVG: `artifacts/dsv41-vllm-20260910/x-card.svg` |
