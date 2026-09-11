@@ -1,0 +1,40 @@
+== champ-postreboot start
+               total        used        free      shared  buff/cache   available
+Mem:             121         116           1           7          12           5
+SwapTotal:      16777212 kB
+SwapFree:       15823872 kB
+== anvil
+               total        used        free      shared  buff/cache   available
+Mem:             121         114           1           7          14           7
+SwapTotal:      16777212 kB
+SwapFree:       16446764 kB
+== ember
+               total        used        free      shared  buff/cache   available
+Mem:             121         114           1           7          14           7
+SwapTotal:      16777212 kB
+SwapFree:       16548972 kB
+== flame
+               total        used        free      shared  buff/cache   available
+Mem:             121         114           0           7          14           7
+SwapTotal:      16777212 kB
+SwapFree:       16543640 kB
+== champ-postreboot end
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           4           7           9           6
+SwapTotal:      16777212 kB
+SwapFree:       15829336 kB
+== anvil
+               total        used        free      shared  buff/cache   available
+Mem:             121         114           1           7          15           7
+SwapTotal:      16777212 kB
+SwapFree:       16448400 kB
+== ember
+               total        used        free      shared  buff/cache   available
+Mem:             121         114           1           7          14           7
+SwapTotal:      16777212 kB
+SwapFree:       16549644 kB
+== flame
+               total        used        free      shared  buff/cache   available
+Mem:             121         114           0           7          14           7
+SwapTotal:      16777212 kB
+SwapFree:       16544716 kB

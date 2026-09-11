@@ -1,0 +1,6 @@
+anvil   FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF---------FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF----------  fast 62s slow 0s | F: 2190 MHz 25.9 W
+ember   FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF----------FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF----------  fast 61s slow 0s | F: 2190 MHz 23.0 W
+flame   FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF---------FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF----------  fast 62s slow 0s | F: 2184 MHz 25.7 W
+forge   FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF---------FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF-----------  fast 62s slow 0s | F: 2184 MHz 25.6 W
+shared seconds 60: all 4 fast 60s, at least one slow 0s (start skew 1s)
+(F fast state, s slow state, - copy block)

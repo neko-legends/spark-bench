@@ -1,0 +1,17 @@
+forge   r0 per-op us, 8KB                       n=  300 p10=   59.20 p50=   61.15 p90=  388.70 max=  735.14 slow(>1.25x p10)= 15%
+forge   r0 per-op us, 32KB                      n=  300 p10=   76.29 p50=   77.57 p90=   85.73 max=  124.61 slow(>1.25x p10)=  4%
+forge   r0 per-op us, 60KB                      n=  300 p10=   92.64 p50=   94.75 p90=  112.32 max=  200.29 slow(>1.25x p10)=  8%
+forge   r0 per-op us, 128KB                     n=  300 p10=   99.94 p50=  130.72 p90=  154.34 max=  283.52 slow(>1.25x p10)= 71%
+forge   r0 per-op us, 256KB                     n=  300 p10=  158.27 p50=  162.37 p90=  171.68 max=  454.91 slow(>1.25x p10)=  4%
+forge   r0 per-op us, 1024KB                    n=  300 p10=  620.13 p50=  633.31 p90=  656.99 max= 1055.10 slow(>1.25x p10)=  1%
+forge   r0 eager step ms, gaps only             n=   40 p10=   52.43 p50=   52.46 p90=   52.48 max=   52.75 slow(>1.25x p10)=  0%
+forge   r0 eager step ms, 88 AR + gaps          n=  150 p10=   60.12 p50=   60.15 p90=   60.46 max=   61.09 slow(>1.25x p10)=  0% | collective cost/step p50=7.69 ms | 1s medians: 60.1 60.2 60.1 60.2 60.1 60.2 60.1 60.2 60.1 60.1
+forge   r0 graph step ms, 88 AR + gaps          n=  300 p10=   61.13 p50=   61.34 p90=   61.66 max=   65.08 slow(>1.25x p10)=  0% | collective cost/step p50=8.88 ms | 1s medians: 61.4 61.4 61.4 61.3 61.2 61.3 61.2 61.4 61.4 61.3 61.4 61.4 61.3 61.4 61.4 61.3 61.4 61.4 61.4
+forge   r0 graph step ms, 88 AR back-to-back    n= 2000 p10=    8.22 p50=    8.47 p90=    8.80 max=   10.13 slow(>1.25x p10)=  0% | 1s medians: 8.5 8.5 8.4 8.5 8.4 8.5 8.4 8.4 8.4 8.5 8.5 8.5 8.4 8.5 8.6 8.6 8.5 8.5
+forge r0 done
+anvil   r1 graph step ms, 88 AR back-to-back    n= 2000 p10=    8.21 p50=    8.47 p90=    8.81 max=   10.13 slow(>1.25x p10)=  0% | 1s medians: 8.5 8.5 8.4 8.4 8.4 8.5 8.4 8.4 8.4 8.5 8.5 8.5 8.4 8.5 8.6 8.6 8.5 8.5
+anvil r1 done
+ember   r2 graph step ms, 88 AR back-to-back    n= 2000 p10=    8.22 p50=    8.47 p90=    8.80 max=   10.14 slow(>1.25x p10)=  0% | 1s medians: 8.5 8.5 8.4 8.5 8.4 8.5 8.4 8.4 8.4 8.5 8.5 8.5 8.3 8.5 8.6 8.6 8.5 8.5
+ember r2 done
+flame   r3 graph step ms, 88 AR back-to-back    n= 2000 p10=    8.21 p50=    8.47 p90=    8.80 max=   10.15 slow(>1.25x p10)=  0% | 1s medians: 8.5 8.5 8.4 8.5 8.4 8.5 8.4 8.4 8.4 8.5 8.5 8.5 8.3 8.5 8.6 8.6 8.5 8.5
+flame r3 done

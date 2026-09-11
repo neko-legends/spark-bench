@@ -1,0 +1,24 @@
+{
+ "label": "champ-postreboot",
+ "seed": 1,
+ "rows": [
+  {
+   "target": 8000,
+   "prompt_tokens": 11699,
+   "ttft_s": 8.303,
+   "prefill_tok_s": 1409.0
+  },
+  {
+   "target": 32000,
+   "prompt_tokens": 46710,
+   "ttft_s": 0.506,
+   "prefill_tok_s": 92285.4
+  },
+  {
+   "target": 100000,
+   "prompt_tokens": 145883,
+   "ttft_s": 0.643,
+   "prefill_tok_s": 226802.6
+  }
+ ]
+}

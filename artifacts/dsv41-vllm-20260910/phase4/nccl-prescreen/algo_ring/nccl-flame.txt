@@ -1,0 +1,11 @@
+flame   r3 per-op us, 8KB                       n=  300 p10=   52.99 p50=   64.13 p90=  345.22 max=  666.78 slow(>1.25x p10)= 41%
+flame   r3 per-op us, 32KB                      n=  300 p10=   59.20 p50=   63.14 p90=  100.00 max=  241.34 slow(>1.25x p10)= 31%
+flame   r3 per-op us, 60KB                      n=  300 p10=   67.20 p50=   73.44 p90=  120.77 max=  194.69 slow(>1.25x p10)= 36%
+flame   r3 per-op us, 128KB                     n=  300 p10=   99.87 p50=  116.45 p90=  225.95 max=  327.17 slow(>1.25x p10)= 46%
+flame   r3 per-op us, 256KB                     n=  300 p10=  111.10 p50=  121.47 p90=  215.36 max=  945.82 slow(>1.25x p10)= 35%
+flame   r3 per-op us, 1024KB                    n=  300 p10=  778.98 p50= 1159.62 p90= 1548.93 max=10295.04 slow(>1.25x p10)= 55%
+flame   r3 eager step ms, gaps only             n=   40 p10=   52.42 p50=   52.42 p90=   52.43 max=   52.74 slow(>1.25x p10)=  0%
+flame   r3 eager step ms, 88 AR + gaps          n=  150 p10=   57.07 p50=   57.12 p90=   58.31 max=   59.59 slow(>1.25x p10)=  0% | collective cost/step p50=4.70 ms | 1s medians: 57.9 57.8 57.1 57.1 57.1 57.1 57.1 57.3 57.2
+flame   r3 graph step ms, 88 AR + gaps          n=  300 p10=   57.77 p50=   58.32 p90=   59.46 max=   67.71 slow(>1.25x p10)=  0% | collective cost/step p50=5.90 ms | 1s medians: 58.7 59.1 58.4 58.3 58.9 58.3 58.7 58.2 58.7 58.5 57.9 58.1 58.1 58.1 58.2 58.3 59.0 58.4
+flame   r3 graph step ms, 88 AR back-to-back    n= 2000 p10=    5.38 p50=    5.69 p90=    7.44 max=   35.23 slow(>1.25x p10)= 20% | 1s medians: 6.7 6.3 5.9 5.9 5.7 5.7 5.8 5.8 5.6 5.6 5.6 5.7 5.6
+flame r3 done

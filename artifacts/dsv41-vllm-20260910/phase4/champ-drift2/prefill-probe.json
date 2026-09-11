@@ -1,0 +1,24 @@
+{
+ "label": "champ-drift2",
+ "seed": 1,
+ "rows": [
+  {
+   "target": 8000,
+   "prompt_tokens": 11699,
+   "ttft_s": 15.302,
+   "prefill_tok_s": 764.5
+  },
+  {
+   "target": 32000,
+   "prompt_tokens": 46710,
+   "ttft_s": 41.917,
+   "prefill_tok_s": 1114.3
+  },
+  {
+   "target": 100000,
+   "prompt_tokens": 145883,
+   "ttft_s": 104.041,
+   "prefill_tok_s": 1402.2
+  }
+ ]
+}

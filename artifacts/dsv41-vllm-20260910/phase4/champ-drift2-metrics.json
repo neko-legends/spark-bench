@@ -1,0 +1,56 @@
+{
+ "C1_coding_per_median": 68.78,
+ "C1_coding_per_reps": [
+  68.78,
+  68.04,
+  71.31
+ ],
+ "C1_math_per_median": 70.72,
+ "C1_math_per_reps": [
+  55.42,
+  70.72,
+  70.94
+ ],
+ "C1_prose_per_median": 32.06,
+ "C1_prose_per_reps": [
+  32.06,
+  31.66,
+  34.0
+ ],
+ "C4_coding_per_median": 38.33,
+ "C4_coding_per_reps": [
+  38.33,
+  34.37,
+  42.63
+ ],
+ "C4_math_per_median": 41.24,
+ "C4_math_per_reps": [
+  39.89,
+  41.24,
+  47.91
+ ],
+ "C4_prose_per_median": 17.15,
+ "C4_prose_per_reps": [
+  17.15,
+  16.86,
+  19.87
+ ],
+ "bench_decode_trials": [
+  59.05,
+  60.34,
+  61.56,
+  64.82,
+  66.11,
+  69.17,
+  71.33,
+  74.37
+ ],
+ "bench_decode_median": 65.465,
+ "bench_decode_min": 59.05,
+ "accept": {
+  "n": 73,
+  "accept_len_mean": 4.38,
+  "accept_len_median": 5.09,
+  "accept_rate_mean": 67.7
+ }
+}

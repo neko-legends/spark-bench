@@ -1,0 +1,11 @@
+ember   r2 per-op us, 8KB                       n=  300 p10=   49.86 p50=   52.00 p90=   56.86 max=  618.72 slow(>1.25x p10)=  8%
+ember   r2 per-op us, 32KB                      n=  300 p10=   56.00 p50=   58.14 p90=   62.24 max=  106.05 slow(>1.25x p10)=  5%
+ember   r2 per-op us, 60KB                      n=  300 p10=   62.11 p50=   64.26 p90=   66.40 max=   76.54 slow(>1.25x p10)=  0%
+ember   r2 per-op us, 128KB                     n=  300 p10=   95.94 p50=   99.14 p90=  105.82 max=  137.09 slow(>1.25x p10)=  2%
+ember   r2 per-op us, 256KB                     n=  300 p10=  106.34 p50=  117.22 p90=  161.57 max=  442.24 slow(>1.25x p10)= 37%
+ember   r2 per-op us, 1024KB                    n=  300 p10=  730.78 p50=  754.11 p90=  798.37 max= 1454.53 slow(>1.25x p10)=  2%
+ember   r2 eager step ms, gaps only             n=   40 p10=   52.29 p50=   52.29 p90=   52.30 max=   62.72 slow(>1.25x p10)=  0%
+ember   r2 eager step ms, 88 AR + gaps          n=  150 p10=   57.13 p50=   57.18 p90=   57.54 max=   77.27 slow(>1.25x p10)=  1% | collective cost/step p50=4.89 ms | 1s medians: 57.3 57.2 57.3 57.2 57.3 57.1 57.3 57.2 57.2
+ember   r2 graph step ms, 88 AR + gaps          n=  300 p10=   57.66 p50=   57.94 p90=   58.28 max=   66.97 slow(>1.25x p10)=  0% | collective cost/step p50=5.65 ms | 1s medians: 58.1 58.0 58.1 58.0 57.9 58.0 58.0 58.1 57.9 57.9 57.8 58.0 58.0 57.9 57.9 57.8 57.8 58.0
+ember   r2 graph step ms, 88 AR back-to-back    n= 2000 p10=    5.18 p50=    5.47 p90=    5.83 max=    7.04 slow(>1.25x p10)=  1% | 1s medians: 5.6 5.5 5.6 5.5 5.5 5.4 5.4 5.4 5.5 5.4 5.4 4.9
+ember r2 done

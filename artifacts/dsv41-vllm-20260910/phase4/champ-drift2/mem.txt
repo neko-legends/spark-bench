@@ -1,0 +1,40 @@
+== champ-drift2 start
+               total        used        free      shared  buff/cache   available
+Mem:             121         113           3           7          13           7
+SwapTotal:      16777212 kB
+SwapFree:       15802656 kB
+== anvil
+               total        used        free      shared  buff/cache   available
+Mem:             121         112           9           7           7           9
+SwapTotal:      16777212 kB
+SwapFree:       16409692 kB
+== ember
+               total        used        free      shared  buff/cache   available
+Mem:             121         112           5           7          12           9
+SwapTotal:      16777212 kB
+SwapFree:       16547444 kB
+== flame
+               total        used        free      shared  buff/cache   available
+Mem:             121         112           9           7           7           9
+SwapTotal:      16777212 kB
+SwapFree:       16535260 kB
+== champ-drift2 end
+               total        used        free      shared  buff/cache   available
+Mem:             121         116           1           7          12           4
+SwapTotal:      16777212 kB
+SwapFree:       15815528 kB
+== anvil
+               total        used        free      shared  buff/cache   available
+Mem:             121         114           1           7          14           7
+SwapTotal:      16777212 kB
+SwapFree:       16416128 kB
+== ember
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           1           7          14           6
+SwapTotal:      16777212 kB
+SwapFree:       16550108 kB
+== flame
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           1           7          13           6
+SwapTotal:      16777212 kB
+SwapFree:       16541936 kB

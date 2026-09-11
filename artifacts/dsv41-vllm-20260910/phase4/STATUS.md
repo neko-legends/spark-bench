@@ -86,3 +86,40 @@ Phase 3 COMPLETE (REPORT.md written). World serving: vllm_dsv41 x4, http://192.1
 
 ## Arms (vs champion, each: relaunch + gates + 3-rep short bench)
 - B3 DRAFT_METHOD=greedy (ACCEPTED, champion 15:27-16:05): C1 coding 70.8 / math 72.9 / prose 29.1 (vs champion 54.5/53.8/22.2 boot2 and 44.9 boot1) = +30/+36/+31%; C4 coding 47.2 (+25%), prose 16.8 (+19%), math 39.0 (-6%); bench-decode median 72.4 min 67.4 (no slow mode); accept len mean 4.36 (unchanged metric); prefill 8k/32k/100k = 1162/1088/1040 (within noisy band, draft unused in prefill). Gates all PASS incl NIAH 32k x3 depths + tool roundtrip. Champion now: greedy draft @ 420k. Phase4 dir: phase4/b3-greedy/.
+- B2 SPEC_K=10 (REJECTED 17:20-17:55): valid K values constrained by this build — num_speculative_tokens must be divisible by draft n_predict=5, so K=6/7 impossible, K=4/K=10 tested. K10: C1 coding 59.9 / math 52.9 / prose 19.3 (vs champion 70.8/72.9/29.1); C4 coding 31.2 (-34%); bench-decode 62.1; accept rate 34.3% (vs 67% at K5). Deeper speculation does not pay: per-position acceptance decays, step cost grows. K5 stays.
+- B2 SPEC_K=4 (running). DGX-dash live group + forge per-spark maxSeqs updated to 4, context 430080; runtime-capacity API verified (forge:8000 ready, maxSequences 4, deepseek-v4.1-flash).
+- Skipped arms with reasons (to date): B9 NCCL sweep — nccl_lat.py needs idle GPUs (world down); phase-3 measured 4-node collectives already optimal (60KB p50 66us, 0% slow steps, 4.4-5.7ms/step), expected effect < noise band. B4 clock-lock-off — phase-3 observed NO slow state on this fleet across two idle probes + all bench telemetry (clocks pinned 2177-2190MHz); uncontrolled experiment risk. B1b GMU 0.78 — GMU bounds GPU memory not host page cache; bimodality (48-tok/s mode) did not reproduce on either 420k boot; KV pool already generous (1.53M).
+- B2 SPEC_K=4 (REJECTED 18:25-19:15): C1 coding 64.9 (-8%) / math 65.8 (-10%) / prose 34.6 (+19%); C4 coding 46.9 (par); bench-decode 68.2 (-6%); accept len 3.87 (vs 4.36). Primary metrics regress; K5 confirmed optimal. NOTE: K4 boot re-autotuned 133 fresh FlashInfer configs (new graph shapes) — tuned before serving, not a confound.
+- B6 compilation pass_config fusion (REJECTED ~18:00): pass_config {fuse_attn_quant, enable_qk_norm_rope_fusion, fuse_qk_norm_rope_kvcache, fuse_rope_kvcache_cat_mla, fuse_allreduce_rms}=true (the fine-grained equivalents of the handoff enable_fusion/enable_noop — those exact keys do not exist in this vLLM build). C1 coding 73.1 (+3%, within drift) but C4 coding 35.4 (-25%) and bench-decode 63.8 (-12%); C1 math/prose par. Fusion passes regress the parallel decode path. Champion stays without pass_config.
+
+## Phase 4b (resume) — started 2026-09-10 18:21 PDT (worker depths-dsv41-tune-resume-20260910)
+
+### Reboot recovery + start gate
+- Depths relaunched the champion manually at 18:18 PDT after the anvil reboot: `DRAFT_METHOD=greedy MAXLEN=430080 GMU=0.80 SEQS=8 SPEC_K=5 ENGRAM_THREADS=32 MAX_BATCHED=8192 bash /home/jun/launch-dsv41-vllm-tp4.sh`. Launcher completed; `/v1/models` lists deepseek-v4.1-flash, `/health` 200, spec gate PASS, all 4 ranks armed `unless-stopped` (log `logs/boot420k-recover.log`). START GATE PASS.
+- Arm B7 (MAX_BATCHED=16384) was INVALID pre-reboot (booted into the reboot, never measured); re-run first this phase.
+
+### Mandatory post-reboot checks
+1. `spark-gpu-clock-lock` active on all 4 (anvil re-applied 18:05 after reboot). SM clocks under load 2177-2190 MHz (forge 2177, anvil 2190, ember 2190, flame 2177-2190), power 32-37 W. PASS.
+2. gpuflip+flipsum clean-state, world DOWN, all 4 concurrent: all nodes all-fast, shared 60s all-fast 60s, slow 0s, anvil 2190 MHz. PASS. (`phase4/gpuflip-postreboot/`) NB: an earlier run with the world UP was invalid — forge OOM'd on probe allocation and flame read 25s "slow" purely from host-memory contention; the world-down rerun is authoritative.
+3. Post-reboot drift band (two champion boots, each shortbench 3 reps):
+   | metric | boot A (champ-postreboot) | boot B (champ-drift2) | delta |
+   |---|---|---|---|
+   | bench-decode median | 65.46 | 65.47 | 0.0% |
+   | accept len mean | 4.44 | 4.38 | -1.4% |
+   | C1 coding | 69.94 | 68.78 | -1.7% |
+   | C1 math | 72.59 | 70.72 | -2.6% |
+   | C1 prose | 32.17 | 32.06 | -0.3% |
+   | C4 coding | 46.18 | 38.33 | -17% (noisy) |
+   | C4 math | 42.28 | 41.24 | -2.5% |
+   Primary metric bench-decode drift ~0%, C1 ~2%, C4 coding noisy. Post-reboot bench-decode (~65.5) sits ~10% below the pre-reboot champion (72.4) but is perfectly stable boot-to-boot; post-reboot 65.5 is the arm reference. Accept only if >3% beyond the ~3% band.
+
+### B9 NCCL pre-screen (world down, `tony/tools/nccl_lat.py` via vLLM pynccl, 4 nodes, 0% slow all runs)
+| variant | collective cost/step p50 eager | graph |
+|---|---|---|
+| baseline | 4.40 ms | 5.17 ms |
+| NCCL_ALGO=Tree | 6.82 | 8.68 |
+| NCCL_ALGO=Ring | 4.66 | 5.87 |
+| NCCL_PROTO=LL128 | 6.24 | 8.03 |
+| NCCL_PROTO=Simple | 7.69 | 8.88 |
+| NCCL_BUFFSIZE=4M | 4.56 | 5.57 |
+No variant improves on baseline; no relaunch warranted. B9 CLOSED (skip). (`phase4/nccl-prescreen/`)
