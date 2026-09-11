@@ -57,6 +57,10 @@ running — values here are the campaign snapshot, not the freeze.
 | context | 430,080 tokens | reserved catch-up window |
 | served id | `deepseek-v4.1-flash` | `http://forge:8000/v1` |
 
+![Champion stats table: DeepSeek-V4.1-Flash on 4× DGX Spark, vLLM TP4 — config, throughput, per-category, speculation and prefill](docs/images/dsv41-vllm-tp4-champion-table-2026-09-10.webp)
+
+*The champion config and its measured numbers in one view (snapshot, 2026-09-10).*
+
 Anchor for context: our V4 Flash on the same fabric did 136 tok/s C1 best-case,
 66–93 at real chat depth, 182 at C4. **V4.1 Flash is slower than V4 Flash** on
 this hardware the same day — newer model, heavier MoE routing, and the greedy
