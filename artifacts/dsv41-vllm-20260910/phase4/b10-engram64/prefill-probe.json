@@ -1,0 +1,24 @@
+{
+ "label": "b10-engram64",
+ "seed": 1,
+ "rows": [
+  {
+   "target": 8000,
+   "prompt_tokens": 11701,
+   "ttft_s": 15.196,
+   "prefill_tok_s": 770.0
+  },
+  {
+   "target": 32000,
+   "prompt_tokens": 46712,
+   "ttft_s": 40.813,
+   "prefill_tok_s": 1144.5
+  },
+  {
+   "target": 100000,
+   "prompt_tokens": 145885,
+   "ttft_s": 100.342,
+   "prefill_tok_s": 1453.9
+  }
+ ]
+}

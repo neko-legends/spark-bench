@@ -1,0 +1,60 @@
+{
+ "hfId": "deepseek-ai/DeepSeek-V4.1-Flash",
+ "modelRevision": "fb2764a5cf321eaa5070ca8f9e892818f477c16d",
+ "hardware": {
+  "hwClass": "UNIFIED",
+  "chipVendor": "NVIDIA",
+  "chipFamily": "GB10",
+  "chipVariant": "GB10 Grace Blackwell",
+  "unifiedMemoryGb": 512,
+  "os": "Ubuntu 24.04 (DGX OS)"
+ },
+ "engineName": "vllm",
+ "engineVersion": "dsv41-feat e47aa780",
+ "engineRepository": "https://github.com/vllm-project/vllm",
+ "quantization": "NVFP4",
+ "backend": "cuda",
+ "contextLength": 430080,
+ "batchSize": 1,
+ "promptTokens": 242,
+ "outputTokens": 600,
+ "prefillTokens": 0,
+ "ttftMs": 311.4,
+ "tokSOut": 46.16,
+ "tokSPrefill": 777.3,
+ "gpuPowerWatts": [
+  24.0,
+  23.0,
+  25.0,
+  24.0
+ ],
+ "engineFlags": {
+  "commandSnippet": "#!/bin/bash\n# launch-dsv41-vllm-tp4.sh \u2014 DeepSeek-V4.1-Flash on vLLM (dsv41-feat lineage), TP4 on 4x DGX Spark.\n# Run ON FORGE (rank 0). Orchestrates all 4 nodes. Workers (rank 3,2,1) first, then head (rank 0).\n#\n# Recipe: tonyd2wild/DeepSeek-V4.1-Flash-vLLM-DGX-Spark @ ca662ac (boot 10), translated to our fabric:\n#   - fabric: RoCE rail B 192.168.10.0/24, IFACE enP2p1s0f1np1, HCA roceP2p1s0f1, GID auto (ember/flame lesson)\n#   - model: full local checkpoint on every node (/home/jun/models/deepseek-v4.1-flash) \u2014 NO NFS,\n#     NO ENGRAM_LOCAL copy (every rank reads weights AND engram rows from local NVMe)\n#   - our serving hardening: disarmed boot (restart no) -> API up -> spec gate -> arm unless-stopped\n#   - Tony's relaunch rule: stop every node first, HEAD FIRST (stale head rendezvous fix)\n#\n# Env overrides: IMAGE (default local/vllm-dsv41:overlay5), MAXLEN (default 131072; raise to 300000\n#   after gates), SEQS (8), GMU (0.80), SPEC_K (5), EAGER=1, PORT (8000), MPORT (29500),\n#   CONTAINER (vllm_dsv41), PATCH_NAME (dsv41-boot10), ARM=1 to auto-arm after gate (default 1).\nset -uo pipefail\n\nIMAGE=${IMAGE:-local/vllm-dsv41:overlay5}\nCONTAINER=${CONTAINER:-vllm_dsv41}\nPATCH_NAME=${PATCH_NAME:-dsv41-boot10}\nMODEL_HOST=/home/jun/models/deepseek-v4.1-flash\nMODEL_DIR=/models/DeepSeek-V4.1-Flash\nCACHE_HOST_PATH=/var/tmp/dsv41-vllm-cache\nSITE=/usr/local/lib/python3.12/dist-packages/vllm\nEXP_NAME=${EXP_NAME:-phase3}\n\nPORT=${PORT:-8000}\nMPORT=${MPORT:-29500}\nHEAD_IP=192.168.10.1\nSERVED_MODEL_NAME=deepseek-v4.1-flash\n\nGMU=${GMU:-0.80}\nMAXLEN=${MAXLEN:-300000}\nSEQS=${SEQS:-8}\nMAX_BATCHED=${MAX_BATCHED:-8192}\nSPEC_K=${SPEC_K:-5}\nDRAFT_METHOD=${DRAFT_METHOD:-probabilistic}\nENGRAM_THREADS=${ENGRAM_THREADS:-32}\nEXTRA_ENV_ARGS=${EXTRA_ENV_ARGS:-}\nCPUS=${CPUS:-}\nif [ -n \"$CPUS\" ]; then DOCKER_CPUS=\"--cpuset-cpus $CPUS\"; else DOCKER_CPUS=\"\"; fi\nCOMPILE_PASS=${COMPILE_PASS:-}\nEAGER=${EAGER:-0}\nCUDAGRAPH_MODE=${CUDAGRAPH_MODE:-FULL_AND_PIECEWISE}\nMEMORY_GIB=${MEMORY_GIB:-112}\nVLLM_EXTRA=${VLLM_EXTRA:-}\nWAIT_SECS=${WAIT_SECS:-2400}\n\nSSH_HOSTS=(local 192.168.10.2 192.168.10.3 192.168.10.4)\nNODE_IPS=(192.168.10.1 192.168.10.2 192.168.10.3 192.168.10.4)\nNODE_NAMES=(forge anvil ember flame)\n\nIFACE=enP2p1s0f1np1\nIB_HCA=roceP2p1s0f1\n\nsay() { echo \"[dsv41-vllm-tp4] $*\"; }\n\nremote() {\n  local h=\"$1\"; shift\n  if [ \"$h\" = local ]; then bash -c \"$*\"; else ssh -o BatchMode=yes -o ConnectTimeout=10 \"$h\" \"$*\"; fi\n}\n\n# ---- 1. stop everything first, HEAD FIRST (Tony fix #6: stale head rendezvous) ----\nsay \"stopping any $CONTAINER on all nodes (head first)...\"\nfor i in 0 1 2 3; do\n  h=${SSH_HOSTS[$i]}\n  remote \"$h\" \"mkdir -p /home/jun/dsv41-crash-logs && \\\n    docker inspect $CONTAINER >/dev/null 2>&1 && docker logs --tail 4000 $CONTAINER > /home/jun/dsv41-crash-logs/\\$(date +%Y%m%d-%H%M%S)-${NODE_NAMES[$i]}.log 2>&1 || true; \\\n    docker rm -f $CONTAINER >/dev/null 2>&1 || true\"\ndone\n\n# ---- 2. preflight per node ----\nsay \"preflight: image=$IMAGE model=$MODEL_HOST patches=~/patches/$PATCH_NAME\"\nfor i in \"${!SSH_HOSTS[@]}\"; do\n  h=\"${SSH_HOSTS[$i]}\"\n  say \"preflight rank$i (${NODE_NAMES[$i]})\"\n  remote \"$h\" \"\n    set -e\n    nvidia-smi --query-gpu=name,memory.total --format=csv,noheader >/dev/null || { echo '  FAIL rank$i: nvidia-smi'; exit 1; }\n    apps=\\$(nvidia-smi --query-compute-apps=pid --format=csv,noheader 2>/dev/null | grep -c . || true)\n    [ \\\"\\$apps\\\" = \\\"0\\\" ] || { echo \\\"  FAIL rank$i: \\$apps GPU compute app(s) running\\\"; exit 1; }\n    test -f $MODEL_HOST/model.safetensors.index.json || { echo '  FAIL rank$i: model index missing'; exit 1; }\n    test -f $MODEL_HOST/model-00048-of-00048.safetensors || { echo '  FAIL rank$i: shard 48 missing'; exit 1; }\n    docker image inspect $IMAGE >/dev/null 2>&1 || { echo '  FAIL rank$i: image $IMAGE missing'; exit 1; }\n    test -f \\$HOME/patches/$PATCH_NAME/mounts.txt || { echo '  FAIL rank$i: patches missing'; exit",
+  "tensorParallel": 4,
+  "concurrency": 1,
+  "specDecoding": true,
+  "specMethod": "dspark",
+  "specNumTokens": 5,
+  "gpuMemUtil": 0.8,
+  "maxRunningSeqs": 8,
+  "kvCacheDtype": "fp8",
+  "prefixCaching": true,
+  "chunkedPrefill": true,
+  "specDraftTokens": 910,
+  "specAcceptedTokens": 418
+ },
+ "promptSha256": "9000edaadb16fc77ab78b39917245a03d4d7585c3ba770cb045a47a0e0683445",
+ "promptSample": "You are helping a small robotics club plan a weekend build. Work through each part carefully and show your reasoning.\n\n1. The club has 7 members and a budget of 412 dollars. A motor driver costs 18.50, a microcontroller 23.75, and each member wants one of each plus a shared 3D-printer spool at 27.90. After buying everything, they split the remainder evenly on batteries priced at 6.35 each. How many batteries can they buy in total, and how much money is left over?\n\n2. Two members disagree about wheel size. Alice says a larger wheel gives more torque at the ground; Ben says it gives more speed. Explain who is right, what tradeoff is actually involved, and how gear ratio changes the answer.\n\n3. Write a short, plain-English procedure (six to nine steps) for safely testing a new motor circuit for the first time, including what to check before applying power.\n\n4. Finally, propose one creative feature for the robot that would be unusual for a club project, and give two concrete risks with how you would mitigate each.\n\nAnswer all four parts in order with clear headings.",
+ "outputSha256": "b946ab6bd3c1b2a6e0ae73fbacb8251de125d4e0749d9e41346143693562d49c",
+ "outputSample": "# 1. Budget and Battery Calculation\n\n**Step 1 \u2014 Cost per member for individual items:**\n- Motor driver: $18.50\n- Microcontroller: $23.75\n- Individual subtotal: $18.50 + $23.75 = **$42.25**\n\n**Step 2 \u2014 Cost for all 7 members:**\n- $42.25 \u00d7 7 = **$295.75**\n\n**Step 3 \u2014 Add the shared 3D-printer spool:**\n- $295.75 + $27.90 = **$323.65**\n\n**Step 4 \u2014 Find the remainder:**\n- $412.00 \u2212 $323.65 = **$88.35**\n\n**Step 5 \u2014 Divide remainder by battery price:**\n- $88.35 \u00f7 $6.35 = 13.913...\n\nSo they can buy **13 batteries**.\n\n**Step 6 \u2014 Cost of 13 batteries:**\n- 13 \u00d7 $6.35 = **$82.55**\n\n**Step 7 \u2014 Money left over:**\n- $88.35 \u2212 $82.55 = **$5.80**\n\n**Answer:** They can buy **13 batteries total**, with **$5.80 left over**.\n\n---\n\n# 2. Wheel Size: Torque vs. Speed\n\n**Ben is closer to right about speed, but Alice is right about torque at the ground \u2014 and both are describing the same tradeoff.**\n\nFor a given motor speed and gear ratio:\n- A **larger wheel** travels farther per revolution, so the robot moves **faster**.\n- But a larger wheel also requires **more torque at the axle** to produce the same force at the ground, so the available **ground force/torque is lower**.\n\nSo:\n- **Larger wheel \u2192 more speed, less torque at the ground.**\n- **Smaller wheel \u2192 less speed, more torque at the ground.**\n\nThe real tradeoff is **speed vs. torque**, not simply \u201clarger wheel = more torque.\u201d\n\n**Gear ratio changes the answer** because it lets you trade motor speed for torque before the wheel even turns:\n- A **lower gear ratio** (more reduction) increases torque and reduces speed.\n- A **higher gear ratio** increases speed and reduces torque.\n\nSo you can partly compensate for wheel size by changing gearing. For example, a large wheel with a low gear ratio can still have good torque, while a small wheel with a high gear ratio can still be fast.\n\n**Summary:** Alice is wrong if she says larger wheels give more torque at the ground. Ben is right that larger wheels give more speed, but the full answer is that wheel size and gear ratio together determine the speed\u2013torque tradeoff.\n\n---\n\n# 3. Safe First-Time Motor Circuit Test Procedure\n\n1. **Check the wiring diagram** and confirm every connection matches the intended circuit.\n2. **",
+ "engineTimingsRaw": {
+  "prompt_tokens": 242,
+  "total_tokens": 842,
+  "completion_tokens": 600,
+  "completion_tokens_details": {
+   "reasoning_tokens": 0
+  }
+ },
+ "temperature": 0,
+ "notes": "4x DGX Spark (GB10), TP4 over ConnectX-7 RoCE, one vLLM world on :8000. Native FP4 routed experts + FP8 dense + FP8 Engram served from local NVMe per node (engram-on-disk patch, tonyd2wild/Kai). DSpark speculative decoding k=5, greedy draft. Context 420k. Bench recipe: canonical prompt, temp 0, thinking off, batch 1, after warmup."
+}

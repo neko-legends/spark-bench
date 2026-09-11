@@ -1,0 +1,24 @@
+{
+ "label": "final-champion",
+ "seed": 1,
+ "rows": [
+  {
+   "target": 8000,
+   "prompt_tokens": 11698,
+   "ttft_s": 8.157,
+   "prefill_tok_s": 1434.1
+  },
+  {
+   "target": 32000,
+   "prompt_tokens": 46709,
+   "ttft_s": 32.015,
+   "prefill_tok_s": 1459.0
+  },
+  {
+   "target": 100000,
+   "prompt_tokens": 145882,
+   "ttft_s": 105.364,
+   "prefill_tok_s": 1384.5
+  }
+ ]
+}

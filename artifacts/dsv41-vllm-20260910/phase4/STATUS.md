@@ -132,3 +132,16 @@ No variant improves on baseline; no relaunch warranted. B9 CLOSED (skip). (`phas
 - accept len 4.28 vs 4.38 (-2.3%); 400k prefill par (1212.6 vs 1235 tok/s).
 - Verdict: ACCEPT. Decode gain is real and reproducible across two independent bench-decode runs; short-generation and prefill metrics neutral within the noisy band; all gates pass. `CHAMPION.env` updated to MAX_BATCHED=16384.
 - B7b (chunked prefill 4096 separately) **not applicable in this vLLM build**: `--max-num-batched-tokens` IS the chunked-prefill chunk size (no independent chunk knob); noted, not run.
+
+## Final (Phase 4b)
+- Champion: **greedy draft + MAX_BATCHED=16384** at 420k (`MAXLEN=430080`, GMU 0.80, SEQS 8, SPEC_K 5, ENGRAM_THREADS 32), left running and armed (`unless-stopped`) on all 4 ranks. `/health` 200, `/v1/models` lists `deepseek-v4.1-flash`.
+- Exact launch command (forge):
+  `set -a; source /home/jun/dsv41-vllm/CHAMPION.env; set +a; bash /home/jun/launch-dsv41-vllm-tp4.sh`
+- `CHAMPION.env` = MAXLEN=430080, GMU=0.80, SEQS=8, SPEC_K=5, DRAFT_METHOD=greedy, ENGRAM_THREADS=32, MAX_BATCHED=16384 (+ host `vm.swappiness=10` on all 4 nodes).
+- Final champion tables (`phase4/final-champion/`): C1 code 71.44/per, prose 31.70, math 69.95; C4 coding agg 169.1; C6 coding agg 206.8; cold prefill 2k/8k/32k/64k/100k = 1659/1477/1495/1431/1416 tok/s; bench-decode medians 73.39/73.99/74.67/66.07 (median 73.7); bench-depth 5k 44.2 / 10k 44.3 / C4 agg 136.2; accept len mean 4.78, rate 75.5%.
+- Gates on final world: ALL PASS incl NIAH 32k x3 + 400k (397,753 tok, TTFT 323 s). `phase4/gates-final-champion.log`.
+- gpuflip clean post-reboot (world down): all 4 all-fast, 0 slow seconds. `phase4/gpuflip-postreboot/`.
+- Stage C combo A/B/A: baseline -> champion -> baseline at 420k, 3 reps each (`combo-a1`, `combo-b`, `combo-a2`). Decode: A1 66.12, B 74.59, A2 74.06. C1/C4 inconclusive (baseline legs disagree by up to 12%); see RESULTS.md caveats.
+- B10 ENGRAM_THREADS=64: REJECT (neutral). B9 NCCL: SKIP (no variant beats baseline). B7b chunked-prefill: n/a in this build. B4/B5/B8/B10-16 not run (timebox) — see RESULTS.md.
+- **LocalMaxxing**: `lmx-capture.py --capture` produced `lmx/payload.json` (code-v1: decode 72.0 tok/s, accept 489/575) and `lmx/payload-reasoning.json` (reasoning-v1: decode 46.2 tok/s, accept 418/910). NOT dry-run/submitted: `LMX_KEY` absent at runtime. A `User-Agent` header was added to lmx-capture.py (Cloudflare 403); backup `lmx-capture.py.preb4b.bak`.
+- Artifacts backed up + pushed to `/home/jun/git/spark-bench` `artifacts/dsv41-vllm-20260910/phase4/` (Agent: depths).

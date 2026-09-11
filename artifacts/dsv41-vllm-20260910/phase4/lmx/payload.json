@@ -1,0 +1,60 @@
+{
+ "hfId": "deepseek-ai/DeepSeek-V4.1-Flash",
+ "modelRevision": "fb2764a5cf321eaa5070ca8f9e892818f477c16d",
+ "hardware": {
+  "hwClass": "UNIFIED",
+  "chipVendor": "NVIDIA",
+  "chipFamily": "GB10",
+  "chipVariant": "GB10 Grace Blackwell",
+  "unifiedMemoryGb": 512,
+  "os": "Ubuntu 24.04 (DGX OS)"
+ },
+ "engineName": "vllm",
+ "engineVersion": "dsv41-feat e47aa780",
+ "engineRepository": "https://github.com/vllm-project/vllm",
+ "quantization": "NVFP4",
+ "backend": "cuda",
+ "contextLength": 430080,
+ "batchSize": 1,
+ "promptTokens": 184,
+ "outputTokens": 600,
+ "prefillTokens": 0,
+ "ttftMs": 470.6,
+ "tokSOut": 71.98,
+ "tokSPrefill": 391.0,
+ "gpuPowerWatts": [
+  24.0,
+  23.0,
+  25.0,
+  24.0
+ ],
+ "engineFlags": {
+  "commandSnippet": "#!/bin/bash\n# launch-dsv41-vllm-tp4.sh \u2014 DeepSeek-V4.1-Flash on vLLM (dsv41-feat lineage), TP4 on 4x DGX Spark.\n# Run ON FORGE (rank 0). Orchestrates all 4 nodes. Workers (rank 3,2,1) first, then head (rank 0).\n#\n# Recipe: tonyd2wild/DeepSeek-V4.1-Flash-vLLM-DGX-Spark @ ca662ac (boot 10), translated to our fabric:\n#   - fabric: RoCE rail B 192.168.10.0/24, IFACE enP2p1s0f1np1, HCA roceP2p1s0f1, GID auto (ember/flame lesson)\n#   - model: full local checkpoint on every node (/home/jun/models/deepseek-v4.1-flash) \u2014 NO NFS,\n#     NO ENGRAM_LOCAL copy (every rank reads weights AND engram rows from local NVMe)\n#   - our serving hardening: disarmed boot (restart no) -> API up -> spec gate -> arm unless-stopped\n#   - Tony's relaunch rule: stop every node first, HEAD FIRST (stale head rendezvous fix)\n#\n# Env overrides: IMAGE (default local/vllm-dsv41:overlay5), MAXLEN (default 131072; raise to 300000\n#   after gates), SEQS (8), GMU (0.80), SPEC_K (5), EAGER=1, PORT (8000), MPORT (29500),\n#   CONTAINER (vllm_dsv41), PATCH_NAME (dsv41-boot10), ARM=1 to auto-arm after gate (default 1).\nset -uo pipefail\n\nIMAGE=${IMAGE:-local/vllm-dsv41:overlay5}\nCONTAINER=${CONTAINER:-vllm_dsv41}\nPATCH_NAME=${PATCH_NAME:-dsv41-boot10}\nMODEL_HOST=/home/jun/models/deepseek-v4.1-flash\nMODEL_DIR=/models/DeepSeek-V4.1-Flash\nCACHE_HOST_PATH=/var/tmp/dsv41-vllm-cache\nSITE=/usr/local/lib/python3.12/dist-packages/vllm\nEXP_NAME=${EXP_NAME:-phase3}\n\nPORT=${PORT:-8000}\nMPORT=${MPORT:-29500}\nHEAD_IP=192.168.10.1\nSERVED_MODEL_NAME=deepseek-v4.1-flash\n\nGMU=${GMU:-0.80}\nMAXLEN=${MAXLEN:-300000}\nSEQS=${SEQS:-8}\nMAX_BATCHED=${MAX_BATCHED:-8192}\nSPEC_K=${SPEC_K:-5}\nDRAFT_METHOD=${DRAFT_METHOD:-probabilistic}\nENGRAM_THREADS=${ENGRAM_THREADS:-32}\nEXTRA_ENV_ARGS=${EXTRA_ENV_ARGS:-}\nCPUS=${CPUS:-}\nif [ -n \"$CPUS\" ]; then DOCKER_CPUS=\"--cpuset-cpus $CPUS\"; else DOCKER_CPUS=\"\"; fi\nCOMPILE_PASS=${COMPILE_PASS:-}\nEAGER=${EAGER:-0}\nCUDAGRAPH_MODE=${CUDAGRAPH_MODE:-FULL_AND_PIECEWISE}\nMEMORY_GIB=${MEMORY_GIB:-112}\nVLLM_EXTRA=${VLLM_EXTRA:-}\nWAIT_SECS=${WAIT_SECS:-2400}\n\nSSH_HOSTS=(local 192.168.10.2 192.168.10.3 192.168.10.4)\nNODE_IPS=(192.168.10.1 192.168.10.2 192.168.10.3 192.168.10.4)\nNODE_NAMES=(forge anvil ember flame)\n\nIFACE=enP2p1s0f1np1\nIB_HCA=roceP2p1s0f1\n\nsay() { echo \"[dsv41-vllm-tp4] $*\"; }\n\nremote() {\n  local h=\"$1\"; shift\n  if [ \"$h\" = local ]; then bash -c \"$*\"; else ssh -o BatchMode=yes -o ConnectTimeout=10 \"$h\" \"$*\"; fi\n}\n\n# ---- 1. stop everything first, HEAD FIRST (Tony fix #6: stale head rendezvous) ----\nsay \"stopping any $CONTAINER on all nodes (head first)...\"\nfor i in 0 1 2 3; do\n  h=${SSH_HOSTS[$i]}\n  remote \"$h\" \"mkdir -p /home/jun/dsv41-crash-logs && \\\n    docker inspect $CONTAINER >/dev/null 2>&1 && docker logs --tail 4000 $CONTAINER > /home/jun/dsv41-crash-logs/\\$(date +%Y%m%d-%H%M%S)-${NODE_NAMES[$i]}.log 2>&1 || true; \\\n    docker rm -f $CONTAINER >/dev/null 2>&1 || true\"\ndone\n\n# ---- 2. preflight per node ----\nsay \"preflight: image=$IMAGE model=$MODEL_HOST patches=~/patches/$PATCH_NAME\"\nfor i in \"${!SSH_HOSTS[@]}\"; do\n  h=\"${SSH_HOSTS[$i]}\"\n  say \"preflight rank$i (${NODE_NAMES[$i]})\"\n  remote \"$h\" \"\n    set -e\n    nvidia-smi --query-gpu=name,memory.total --format=csv,noheader >/dev/null || { echo '  FAIL rank$i: nvidia-smi'; exit 1; }\n    apps=\\$(nvidia-smi --query-compute-apps=pid --format=csv,noheader 2>/dev/null | grep -c . || true)\n    [ \\\"\\$apps\\\" = \\\"0\\\" ] || { echo \\\"  FAIL rank$i: \\$apps GPU compute app(s) running\\\"; exit 1; }\n    test -f $MODEL_HOST/model.safetensors.index.json || { echo '  FAIL rank$i: model index missing'; exit 1; }\n    test -f $MODEL_HOST/model-00048-of-00048.safetensors || { echo '  FAIL rank$i: shard 48 missing'; exit 1; }\n    docker image inspect $IMAGE >/dev/null 2>&1 || { echo '  FAIL rank$i: image $IMAGE missing'; exit 1; }\n    test -f \\$HOME/patches/$PATCH_NAME/mounts.txt || { echo '  FAIL rank$i: patches missing'; exit",
+  "tensorParallel": 4,
+  "concurrency": 1,
+  "specDecoding": true,
+  "specMethod": "dspark",
+  "specNumTokens": 5,
+  "gpuMemUtil": 0.8,
+  "maxRunningSeqs": 8,
+  "kvCacheDtype": "fp8",
+  "prefixCaching": true,
+  "chunkedPrefill": true,
+  "specDraftTokens": 575,
+  "specAcceptedTokens": 489
+ },
+ "promptSha256": "a737db738bd4e37881d1737f8dc51cae0295eff9ece6551d39826ce8ed43a690",
+ "promptSample": "Implement a small command-line tool in Python called `logtally`.\n\nRequirements:\n- It reads newline-delimited JSON log records from stdin. Each record has `ts` (ISO-8601 string), `level` (one of DEBUG, INFO, WARN, ERROR), `service` (string), and optional `latency_ms` (number).\n- It prints, per service, the count of records by level and the p50 and p95 of `latency_ms` (ignore records without latency).\n- Malformed lines must be counted and reported at the end, never crash the program.\n- Support a `--since <ISO timestamp>` flag that drops earlier records.\n- Use only the standard library.\n\nAfter the code, explain in two or three sentences how you computed percentiles and why you chose that method, then list three edge cases a unit test suite should cover.",
+ "outputSha256": "c659e7bf04f36e94cb855b49c7f66c8f675556f71870f544d1a4e8ba5b45c6d7",
+ "outputSample": "```python\n#!/usr/bin/env python3\n\"\"\"logtally: tally newline-delimited JSON log records by service and level.\"\"\"\n\nimport argparse\nimport json\nimport sys\nfrom collections import defaultdict\nfrom datetime import datetime, timezone\n\n\nLEVELS = (\"DEBUG\", \"INFO\", \"WARN\", \"ERROR\")\n\n\ndef parse_ts(value):\n    \"\"\"Parse an ISO-8601 timestamp, tolerating a trailing 'Z'.\"\"\"\n    if not isinstance(value, str):\n        raise ValueError(\"ts must be a string\")\n    s = value.strip()\n    if s.endswith(\"Z\"):\n        s = s[:-1] + \"+00:00\"\n    dt = datetime.fromisoformat(s)\n    if dt.tzinfo is None:\n        dt = dt.replace(tzinfo=timezone.utc)\n    return dt\n\n\ndef percentile(sorted_values, p):\n    \"\"\"Linear-interpolation percentile (matches numpy's default).\"\"\"\n    if not sorted_values:\n        return None\n    if len(sorted_values) == 1:\n        return float(sorted_values[0])\n    k = (len(sorted_values) - 1) * p\n    lo = int(k)\n    hi = min(lo + 1, len(sorted_values) - 1)\n    frac = k - lo\n    return sorted_values[lo] + (sorted_values[hi] - sorted_values[lo]) * frac\n\n\ndef main(argv=None):\n    parser = argparse.ArgumentParser(prog=\"logtally\")\n    parser.add_argument(\n        \"--since\",\n        metavar=\"ISO_TIMESTAMP\",\n        help=\"drop records with ts earlier than this timestamp\",\n    )\n    args = parser.parse_args(argv)\n\n    since = None\n    if args.since is not None:\n        try:\n            since = parse_ts(args.since)\n        except ValueError as e:\n            print(f\"logtally: invalid --since value: {e}\", file=sys.stderr)\n            return 2\n\n    counts = defaultdict(lambda: defaultdict(int))   # service -> level -> count\n    latencies = defaultdict(list)                    # service -> [latency_ms]\n    malformed = 0\n\n    for line in sys.stdin:\n        line = line.strip()\n        if not line:\n            continue\n        try:\n            rec = json.loads(line)\n            if not isinstance(rec, dict):\n                raise ValueError(\"record is not an object\")\n            ts = parse_ts(rec[\"ts\"])\n            level = rec[\"level\"]\n            service = rec[\"service\"]\n            if level not in LEVELS:\n                raise ValueError(f\"unknown level: {level!r}\")\n            if not isinstance(service, str):\n                raise ValueError(\"service must be a string\")\n        except (json.JSONDecodeError, KeyError, ValueError, TypeError):\n            malformed += 1\n            continue\n\n        if since is not None and ts <",
+ "engineTimingsRaw": {
+  "prompt_tokens": 184,
+  "total_tokens": 784,
+  "completion_tokens": 600,
+  "completion_tokens_details": {
+   "reasoning_tokens": 0
+  }
+ },
+ "temperature": 0,
+ "notes": "4x DGX Spark (GB10), TP4 over ConnectX-7 RoCE, one vLLM world on :8000. Native FP4 routed experts + FP8 dense + FP8 Engram served from local NVMe per node (engram-on-disk patch, tonyd2wild/Kai). DSpark speculative decoding k=5, greedy draft. Context 420k. Bench recipe: canonical prompt, temp 0, thinking off, batch 1, after warmup."
+}

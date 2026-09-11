@@ -1,0 +1,24 @@
+{
+ "label": "combo-b",
+ "seed": 1,
+ "rows": [
+  {
+   "target": 8000,
+   "prompt_tokens": 11697,
+   "ttft_s": 17.839,
+   "prefill_tok_s": 655.7
+  },
+  {
+   "target": 32000,
+   "prompt_tokens": 46708,
+   "ttft_s": 77.714,
+   "prefill_tok_s": 601.0
+  },
+  {
+   "target": 100000,
+   "prompt_tokens": 145881,
+   "ttft_s": 106.84,
+   "prefill_tok_s": 1365.4
+  }
+ ]
+}

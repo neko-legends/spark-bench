@@ -1,0 +1,40 @@
+== combo-a2 start
+               total        used        free      shared  buff/cache   available
+Mem:             121         113           2           7          14           8
+SwapTotal:      16777212 kB
+SwapFree:       15798336 kB
+== anvil
+               total        used        free      shared  buff/cache   available
+Mem:             121         111          10           7           7          10
+SwapTotal:      16777212 kB
+SwapFree:       16395864 kB
+== ember
+               total        used        free      shared  buff/cache   available
+Mem:             121         112           6           7          11           9
+SwapTotal:      16777212 kB
+SwapFree:       16547520 kB
+== flame
+               total        used        free      shared  buff/cache   available
+Mem:             121         112           5           7          12           9
+SwapTotal:      16777212 kB
+SwapFree:       16540032 kB
+== combo-a2 end
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           2           7          12           6
+SwapTotal:      16777212 kB
+SwapFree:       15814228 kB
+== anvil
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           2           7          12           6
+SwapTotal:      16777212 kB
+SwapFree:       16408504 kB
+== ember
+               total        used        free      shared  buff/cache   available
+Mem:             121         114           1           7          13           6
+SwapTotal:      16777212 kB
+SwapFree:       16550200 kB
+== flame
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           1           7          14           6
+SwapTotal:      16777212 kB
+SwapFree:       16544360 kB

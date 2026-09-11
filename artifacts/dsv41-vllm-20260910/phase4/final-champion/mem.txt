@@ -1,0 +1,6 @@
+== final start
+               total        used        free      shared  buff/cache   available
+Mem:             121         116           1           7          11           4
+== final end
+               total        used        free      shared  buff/cache   available
+Mem:             121         117           2           7          10           3
