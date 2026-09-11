@@ -1,7 +1,8 @@
 # Ship checklist — DeepSeek-V4.1-Flash on 4× DGX Spark (vLLM TP4)
 
-Agreed with Jun 2026-09-10 19:11 PDT. Group D (upstream/community filings) is **deliberately
-skipped** — decided, not forgotten.
+Agreed with Jun 2026-09-10 19:11 PDT; group D **re-instated** at 19:17 PDT ("do those for me
+too") but **hold posting until the final champion numbers exist**, so each post cites the shipped
+config. Drafts live in `upstream-drafts/`.
 
 State when written: world live at 420k, DSpark k=5 + greedy draft (accepted arm), all gates
 passing, tuning campaign in its final arms (B8/B9 in flight), DGX-dash updated (maxSeqs 4).
@@ -39,12 +40,22 @@ passing, tuning campaign in its final arms (B8/B9 in flight), DGX-dash updated (
 - [ ] LocalMaxxing Verified runs: capture `code-v1` + `reasoning-v1` (`lmx-capture.py --capture`),
       `--dry-run`, **Jun approves payloads**, then submit; record receipts.
 
-## D. Upstream / community — SKIPPED by decision (2026-09-10)
-Deferred: SGLang DSpark corruption report, SGLang DSML parser issue+PR, comment on tonyd2wild
-issue #1 (our all-fast clock-lock result + greedy-draft finding), offer of the parallel row-store
-to 0xSero. Consequence to remember: the SGLang lane stays spec-off (correct but ~13 tok/s) and
-the DSML parser bug stays unfiled. If either becomes relevant again, the evidence is already
-collected in `sglang-lane/` and `STATUS-sglang-phases1-2.md`.
+## D. Upstream / community — re-instated 2026-09-10 19:17, **hold for final numbers**
+Drafts for all four are written and ready in `upstream-drafts/README.md`. Filing order:
+- [ ] **SGLang `deepseekv41` parser drops params without `string=`** — issue **+ PR** (we have a
+      working, regression-tested patch). Pre-post work: minimal repro against SGLang `main`, add
+      a test beside the existing detector tests, confirm no change when the attribute is present.
+- [ ] **tonyd2wild issue #1 comment** — our all-fast clock-lock result (4 nodes, zero flips) plus
+      the greedy-draft finding. No code. Needs final gpuflip outputs + final C1 numbers inlined.
+- [ ] **SGLang DSpark corruption on GB10** — issue only (evidence, no fix). Pre-post work: retest
+      on a post-#38879 build so the report is current.
+- [ ] **0xSero parallel Engram reader** — issue first (measurements: serial ~300 µs/row vs
+      parallel ~17 µs vs cached ~0.4 µs; cold prefill 6–10 vs 200+ tok/s); PR only if he wants it.
+      Our draft reader was never built/measured — say so, don't claim it.
+- [ ] Build the repro/evidence links (raw outputs already in `sglang-lane/` and `STATUS-sglang-phases1-2.md`).
+
+**Notify Jun when this package is ready to post** — i.e. when Stage C is in and the final numbers
+can be inlined. Posting happens under Jun's GitHub account.
 
 ## E. Housekeeping
 - [ ] Rotate the LocalMaxxing API key (it was pasted into chat; the harness reads it from env only).
