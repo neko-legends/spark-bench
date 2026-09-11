@@ -123,3 +123,12 @@ Phase 3 COMPLETE (REPORT.md written). World serving: vllm_dsv41 x4, http://192.1
 | NCCL_PROTO=Simple | 7.69 | 8.88 |
 | NCCL_BUFFSIZE=4M | 4.56 | 5.57 |
 No variant improves on baseline; no relaunch warranted. B9 CLOSED (skip). (`phase4/nccl-prescreen/`)
+
+### B7 re-run MAX_BATCHED=16384 (ACCEPTED — champion 20:35 PDT)
+- Boot 18:55Z: KV pool unchanged (cap not reached at 8 seqs), gates ALL PASS including 400k NIAH (prompt 397,753 tok, TTFT 328 s, 1212.6 tok/s prefill, answer correct) and 32k x3 depths (1511/1672/2049 tok/s); arithmetic/JSON/tool-call/tool-roundtrip/temp0 all PASS. (`phase4/gates-b7-batched16k.log`)
+- `bench-decode` median **70.98** (trials 56.9-76.2, n=8) and recheck median **73.82** (sd 1.49, 70.9-75.6, n=10) vs champion reference 65.46/65.47 = **+8.4% / +12.8%**, beyond the ~0-3% post-reboot drift band.
+- C1 (6 reps across shortbench + recheck): coding [70.55,54.72,56.83,66.49,73.69,72.23] median 68.4 vs champion 68.78/69.94 — neutral; math 71.22 vs 70.72 — neutral; prose 31.74 vs 32.06 — neutral.
+- C4: coding 47.51 (champion 38.33-46.18, noisy), math 42.95 (par), prose 14.59 vs 17.15/17.44 = -15% (noisy).
+- accept len 4.28 vs 4.38 (-2.3%); 400k prefill par (1212.6 vs 1235 tok/s).
+- Verdict: ACCEPT. Decode gain is real and reproducible across two independent bench-decode runs; short-generation and prefill metrics neutral within the noisy band; all gates pass. `CHAMPION.env` updated to MAX_BATCHED=16384.
+- B7b (chunked prefill 4096 separately) **not applicable in this vLLM build**: `--max-num-batched-tokens` IS the chunked-prefill chunk size (no independent chunk knob); noted, not run.

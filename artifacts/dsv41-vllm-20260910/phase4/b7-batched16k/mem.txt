@@ -1,0 +1,40 @@
+== b7-batched16k start
+               total        used        free      shared  buff/cache   available
+Mem:             121         112           9           7           8           9
+SwapTotal:      16777212 kB
+SwapFree:       15796136 kB
+== anvil
+               total        used        free      shared  buff/cache   available
+Mem:             121         111          10           7           8          10
+SwapTotal:      16777212 kB
+SwapFree:       16414292 kB
+== ember
+               total        used        free      shared  buff/cache   available
+Mem:             121         111          10           7           8          10
+SwapTotal:      16777212 kB
+SwapFree:       16538776 kB
+== flame
+               total        used        free      shared  buff/cache   available
+Mem:             121         111          10           7           7          10
+SwapTotal:      16777212 kB
+SwapFree:       16532344 kB
+== b7-batched16k end
+               total        used        free      shared  buff/cache   available
+Mem:             121         117           1           7          11           4
+SwapTotal:      16777212 kB
+SwapFree:       15814736 kB
+== anvil
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           3           7          11           5
+SwapTotal:      16777212 kB
+SwapFree:       16418908 kB
+== ember
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           1           7          13           5
+SwapTotal:      16777212 kB
+SwapFree:       16549812 kB
+== flame
+               total        used        free      shared  buff/cache   available
+Mem:             121         116           2           7          11           5
+SwapTotal:      16777212 kB
+SwapFree:       16538780 kB

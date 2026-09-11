@@ -1,0 +1,24 @@
+{
+ "label": "b7-batched16k",
+ "seed": 1,
+ "rows": [
+  {
+   "target": 8000,
+   "prompt_tokens": 11701,
+   "ttft_s": 17.149,
+   "prefill_tok_s": 682.3
+  },
+  {
+   "target": 32000,
+   "prompt_tokens": 46712,
+   "ttft_s": 49.975,
+   "prefill_tok_s": 934.7
+  },
+  {
+   "target": 100000,
+   "prompt_tokens": 145885,
+   "ttft_s": 106.06,
+   "prefill_tok_s": 1375.5
+  }
+ ]
+}
