@@ -61,6 +61,26 @@ fi
 [ -f "$CHAMPION_ENV" ] || fail "champion env not found: $CHAMPION_ENV"
 [ -f "$LAUNCHER" ] || fail "launcher not found: $LAUNCHER"
 
+# ---- 0. fast-path guards ----
+# a) API already serving -> nothing to do (watchdog probes can race a recovery).
+if curl -fsS --max-time 5 "$API_URL" 2>/dev/null | grep -q "$MODEL"; then
+  say "API already serving $MODEL — nothing to do."
+  exit 0
+fi
+# b) Boot-in-progress guard (2026-09-12): during a launcher boot the API is down
+#    for ~8-10 min while containers are young. A watchdog that fires then would
+#    kill the boot it is trying to fix. If the head container is younger than
+#    15 min, assume a boot is in progress and leave it alone.
+head_started="$(remote local "docker inspect -f '{{.State.StartedAt}}' $CONTAINER" 2>/dev/null || true)"
+if [ -n "$head_started" ]; then
+  started_epoch=$(date -d "$head_started" +%s 2>/dev/null || echo 0)
+  age=$(( $(date +%s) - started_epoch ))
+  if [ "$age" -ge 0 ] && [ "$age" -lt 900 ]; then
+    say "head container is ${age}s old and API not up yet — a boot is in progress; leaving it alone."
+    exit 0
+  fi
+fi
+
 # ---- 1. reachability ----
 say "1/6 checking node reachability..."
 for i in "${!SSH_HOSTS[@]}"; do
@@ -104,6 +124,23 @@ for i in "${!SSH_HOSTS[@]}"; do
     sleep 5
   done
   say "  ${NODE_NAMES[$i]}: GPU idle"
+done
+
+# ---- 4b. stop competing heavyweight model containers ----
+# Lesson 2026-09-11: a stray `docker start glm53-exl3` during a boot left vLLM
+# unable to allocate KV cache ("No available memory for the cache blocks").
+# Explicit list, never a pattern: spark-api-tailnet and other service
+# containers must survive.
+KNOWN_COMPETITORS=(glm53-exl3 glm53_sglang qwen38-nvfp4 deepseek-v4-flash-tp4-vllm-dspark-1 dsv41-rank0 dsv41-rank1 dsv41-rank2 dsv41-rank3)
+for i in "${!SSH_HOSTS[@]}"; do
+  h="${SSH_HOSTS[$i]}"
+  for c in "${KNOWN_COMPETITORS[@]}"; do
+    running="$(remote "$h" "docker ps -q -f name=^${c}\$" 2>/dev/null | tr -d '[:space:]')"
+    if [ -n "$running" ]; then
+      say "  ${NODE_NAMES[$i]}: stopping competing container $c"
+      remote "$h" "docker stop $c >/dev/null 2>&1 || true" || true
+    fi
+  done
 done
 
 # ---- 5. relaunch with champion values ----
