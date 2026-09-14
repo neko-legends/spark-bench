@@ -127,6 +127,71 @@ class ServiceTests(unittest.TestCase):
             })
 
 
+class BackpressureTests(unittest.TestCase):
+    """2026-09-13: cap concurrent warms, coalesce to the latest snapshot, dispatch by priority."""
+
+    def test_inflight_cap_serializes_warms(self):
+        started, release = [], []
+
+        def warmup(work):
+            started.append(work["session_id"])
+            while not release:
+                time.sleep(0.01)
+            return {"usage": {"prompt_tokens": 1}}
+
+        service = CatchupService(warmup_fn=warmup, max_context=10000, max_inflight=1)
+        service.submit({"session_id": "a", "messages": [{"role": "user", "content": "aaa"}]})
+        service.submit({"session_id": "b", "messages": [{"role": "user", "content": "bbb"}]})
+        time.sleep(0.05)
+        self.assertEqual(started, ["a"])
+        self.assertEqual(service.stats()["inflight"], 1)
+        self.assertEqual(service.stats()["pending"], 1)
+        release.append(True)
+        self.assertTrue(wait_until(lambda: service.get("b")["state"] == "warm"))
+        self.assertEqual(started, ["a", "b"])
+        self.assertEqual(service.stats()["inflight"], 0)
+
+    def test_pending_snapshot_coalesces_to_latest(self):
+        started, release = [], []
+
+        def warmup(work):
+            started.append(json.dumps(work["messages"]))
+            if "blocker" in started[-1]:
+                while not release:
+                    time.sleep(0.01)
+            return {"usage": {"prompt_tokens": 1}}
+
+        service = CatchupService(warmup_fn=warmup, max_context=10000, max_inflight=1)
+        service.submit({"session_id": "x", "messages": [{"role": "user", "content": "blocker"}]})
+        for i in range(3):
+            service.submit({"session_id": "y", "messages": [{"role": "user", "content": f"snapshot {i}"}]})
+        self.assertEqual(service.stats()["pending"], 1)
+        release.append(True)
+        self.assertTrue(wait_until(lambda: service.get("y")["state"] == "warm"))
+        y_runs = [s for s in started if "snapshot" in s]
+        self.assertEqual(len(y_runs), 1)
+        self.assertIn("snapshot 2", y_runs[0])
+
+    def test_interactive_turn_dispatches_before_background_boot(self):
+        started, release = [], []
+
+        def warmup(work):
+            started.append(work["session_id"])
+            if work["session_id"] == "blocker":
+                while not release:
+                    time.sleep(0.01)
+            return {"usage": {"prompt_tokens": 1}}
+
+        service = CatchupService(warmup_fn=warmup, max_context=10000, max_inflight=1)
+        service.submit({"session_id": "blocker", "messages": [{"role": "user", "content": "hold"}]})
+        service.submit({"session_id": "kai:background", "reason": "boot", "messages": [{"role": "user", "content": "b"}]})
+        service.submit({"session_id": "nekobot", "reason": "touch", "messages": [{"role": "user", "content": "t"}]})
+        service.submit({"session_id": "eva-dm", "reason": "turn", "messages": [{"role": "user", "content": "typing"}]})
+        release.append(True)
+        self.assertTrue(wait_until(lambda: service.get("kai:background")["state"] == "warm"))
+        self.assertEqual(started, ["blocker", "eva-dm", "nekobot", "kai:background"])
+
+
 class HttpTests(unittest.TestCase):
     def setUp(self):
         self.service = CatchupService(

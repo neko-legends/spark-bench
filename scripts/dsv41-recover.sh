@@ -62,10 +62,26 @@ fi
 [ -f "$LAUNCHER" ] || fail "launcher not found: $LAUNCHER"
 
 # ---- 0. fast-path guards ----
-# a) API already serving -> nothing to do (watchdog probes can race a recovery).
+# a) API already serving AND the engine actually generates -> nothing to do.
+#    2026-09-13 lesson: a wedged engine keeps answering /health and /v1/models
+#    (the HTTP front end is alive) while every completion hangs forever. The old
+#    guard checked only /v1/models and exited 0, so watchdog wedge recoveries
+#    were silently no-ops. Now require a 1-token completion within the probe
+#    timeout; on a healthy or merely busy world that answers in seconds.
+#    Override the probe budget with RECOVER_PROBE_TIMEOUT (default 240s).
+PROBE_TIMEOUT="${RECOVER_PROBE_TIMEOUT:-240}"
 if curl -fsS --max-time 5 "$API_URL" 2>/dev/null | grep -q "$MODEL"; then
-  say "API already serving $MODEL — nothing to do."
-  exit 0
+  if [ "${1:-}" = "--restart" ]; then
+    say "API lists $MODEL but --restart requested (wedge lane) — skipping the fast path."
+  elif curl -fsS --max-time "$PROBE_TIMEOUT" -H 'Content-Type: application/json' \
+         -X POST "${API_URL%/models}/chat/completions" \
+         -d "{\"model\":\"$MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_tokens\":1,\"chat_template_kwargs\":{\"thinking\":false}}" \
+         >/dev/null 2>&1; then
+    say "API serving $MODEL and a 1-token completion answered — nothing to do."
+    exit 0
+  else
+    say "API lists $MODEL but a 1-token completion did not answer within ${PROBE_TIMEOUT}s — engine wedged; recovering."
+  fi
 fi
 # b) Boot-in-progress guard (2026-09-12): during a launcher boot the API is down
 #    for ~8-10 min while containers are young. A watchdog that fires then would

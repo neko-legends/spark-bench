@@ -28,7 +28,7 @@ def build_handler(service: CatchupService) -> type[BaseHTTPRequestHandler]:
         def do_GET(self) -> None:  # noqa: N802
             parsed = urlparse(self.path)
             if parsed.path == "/v1/health":
-                return _json(self, 200, {"ok": True, "vllm": service.vllm_url})
+                return _json(self, 200, {"ok": True, "vllm": service.vllm_url, **service.stats()})
             if parsed.path == "/v1/status":
                 query = parse_qs(parsed.query)
                 session_id = (query.get("session_id") or [""])[0]
@@ -60,6 +60,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model", default=os.environ.get("CATCHUP_MODEL", ""))
     parser.add_argument("--max-context", type=int, default=int(os.environ.get("CATCHUP_MAX_CONTEXT", "1000000")))
     parser.add_argument("--timeout", type=float, default=float(os.environ.get("CATCHUP_TIMEOUT_S", "1800")))
+    parser.add_argument(
+        "--max-inflight",
+        type=int,
+        default=int(os.environ.get("CATCHUP_MAX_INFLIGHT", "2")),
+        help="max concurrent warm prefills sent to the engine (backpressure; default 2)",
+    )
     args = parser.parse_args(argv)
     host, _, port = args.listen.partition(":")
     service = CatchupService(
@@ -67,9 +73,10 @@ def main(argv: list[str] | None = None) -> int:
         model=args.model,
         max_context=args.max_context,
         timeout_s=args.timeout,
+        max_inflight=args.max_inflight,
     )
     server = ThreadingHTTPServer((host or "127.0.0.1", int(port or 18900)), build_handler(service))
-    print(f"catchup listening on {host or '127.0.0.1'}:{port or 18900} → {args.vllm}", flush=True)
+    print(f"catchup listening on {host or '127.0.0.1'}:{port or 18900} → {args.vllm} (max_inflight={args.max_inflight})", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

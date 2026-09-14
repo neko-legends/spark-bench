@@ -157,6 +157,13 @@ class SessionState:
 WarmupFn = Callable[[dict[str, Any]], Mapping[str, Any]]
 
 
+# Dispatch order for queued warms. Lower sorts first. Someone typing ("turn")
+# beats a lane that just booted, which beats housekeeping touches; and a lane's
+# interactive session always beats its ":background" sibling.
+REASON_RANK = {"turn": 0, "restore": 1, "compact": 2, "boot": 3, "touch": 4}
+BACKGROUND_SUFFIX = ":background"
+
+
 class CatchupService:
     def __init__(
         self,
@@ -165,6 +172,7 @@ class CatchupService:
         model: str = "",
         max_context: int = 1_000_000,
         timeout_s: float = 1800.0,
+        max_inflight: int = 2,
         warmup_fn: WarmupFn | None = None,
         now: Callable[[], float] | None = None,
     ) -> None:
@@ -172,10 +180,41 @@ class CatchupService:
         self.model = model
         self.max_context = int(max_context or 1_000_000)
         self.timeout_s = float(timeout_s)
+        # Backpressure (2026-09-13): the sidecar used to spawn one warm thread per
+        # snapshot with no cap. 30 warms in flight against an 8-seat world evicted
+        # each other's KV blocks, turning cache hits into full re-prefills and the
+        # queue into a 49-deep pile. Now at most max_inflight warms run; the rest
+        # wait in _pending, latest snapshot per session wins, dispatched by priority.
+        self.max_inflight = max(1, int(max_inflight or 1))
+        self._inflight = 0
+        self._pending: dict[str, dict[str, Any]] = {}
         self._warmup_fn = warmup_fn or self._http_warmup
         self._now = now or time.time
         self._lock = threading.Lock()
         self._sessions: dict[str, SessionState] = {}
+
+    def stats(self) -> dict[str, Any]:
+        with self._lock:
+            return {
+                "max_inflight": self.max_inflight,
+                "inflight": self._inflight,
+                "pending": len(self._pending),
+                "pending_sessions": sorted(self._pending),
+            }
+
+    @staticmethod
+    def _priority(work: Mapping[str, Any]) -> tuple:
+        sid = str(work.get("session_id") or "")
+        background = 1 if sid.endswith(BACKGROUND_SUFFIX) else 0
+        return (background, REASON_RANK.get(str(work.get("reason") or ""), 9), float(work.get("submitted_at") or 0.0))
+
+    def _dispatch_locked(self) -> None:
+        """Start pending warms up to max_inflight, best priority first. Caller holds _lock."""
+        while self._inflight < self.max_inflight and self._pending:
+            sid = min(self._pending, key=lambda key: self._priority(self._pending[key]))
+            work = self._pending.pop(sid)
+            self._inflight += 1
+            threading.Thread(target=self._run_warmup, args=(work,), daemon=True).start()
 
     def get(self, session_id: str = "") -> dict[str, Any] | list[dict[str, Any]]:
         with self._lock:
@@ -216,13 +255,27 @@ class CatchupService:
                 "model": snapshot["model"] or self.model,
                 "hash": digest,
                 "generation": generation,
+                "reason": snapshot["reason"],
+                "submitted_at": self._now(),
             }
-        thread = threading.Thread(target=self._run_warmup, args=(work,), daemon=True)
-        thread.start()
-        with self._lock:
+            # Latest snapshot wins: a newer snapshot for a session that is still
+            # waiting replaces the queued one (its prefill was never started, so
+            # nothing is wasted). An already-running warm cannot be cancelled;
+            # it finishes, is marked stale by the generation check, and the
+            # newer snapshot runs next.
+            self._pending[snapshot["session_id"]] = work
+            self._dispatch_locked()
             return self._sessions[snapshot["session_id"]].public()
 
     def _run_warmup(self, work: dict[str, Any]) -> None:
+        try:
+            self._run_warmup_inner(work)
+        finally:
+            with self._lock:
+                self._inflight = max(0, self._inflight - 1)
+                self._dispatch_locked()
+
+    def _run_warmup_inner(self, work: dict[str, Any]) -> None:
         error_text = None
         prompt_tokens = None
         cached_tokens = None

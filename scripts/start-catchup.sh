@@ -14,4 +14,5 @@ exec python3 -m catchup \
   --listen "${CATCHUP_LISTEN:-127.0.0.1:18900}" \
   --vllm "${CATCHUP_VLLM_URL:-http://127.0.0.1:18888/v1}" \
   --model "${CATCHUP_MODEL:-${SERVED_MODEL_NAME:-}}" \
-  --max-context "${CATCHUP_MAX_CONTEXT:-1000000}"
+  --max-context "${CATCHUP_MAX_CONTEXT:-1000000}" \
+  --max-inflight "${CATCHUP_MAX_INFLIGHT:-2}"
