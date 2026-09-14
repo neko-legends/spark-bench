@@ -1,0 +1,40 @@
+== unc-night-champion start
+               total        used        free      shared  buff/cache   available
+Mem:             121         117           1           7          11           4
+SwapTotal:      16777212 kB
+SwapFree:       15667856 kB
+== anvil
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           1           7          12           6
+SwapTotal:      16777212 kB
+SwapFree:       16357272 kB
+== ember
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           1           7          13           6
+SwapTotal:      16777212 kB
+SwapFree:       16540336 kB
+== flame
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           5           7           8           5
+SwapTotal:      16777212 kB
+SwapFree:       16532152 kB
+== unc-night-champion end
+               total        used        free      shared  buff/cache   available
+Mem:             121         116           3           7          10           4
+SwapTotal:      16777212 kB
+SwapFree:       15677288 kB
+== anvil
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           1           7          12           6
+SwapTotal:      16777212 kB
+SwapFree:       16360772 kB
+== ember
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           2           7          12           6
+SwapTotal:      16777212 kB
+SwapFree:       16542616 kB
+== flame
+               total        used        free      shared  buff/cache   available
+Mem:             121         116           1           7          13           5
+SwapTotal:      16777212 kB
+SwapFree:       16537420 kB

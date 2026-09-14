@@ -1,0 +1,24 @@
+{
+ "label": "unc-arm-cpuset",
+ "seed": 1,
+ "rows": [
+  {
+   "target": 8000,
+   "prompt_tokens": 11700,
+   "ttft_s": 11.693,
+   "prefill_tok_s": 1000.6
+  },
+  {
+   "target": 32000,
+   "prompt_tokens": 46711,
+   "ttft_s": 158.2,
+   "prefill_tok_s": 295.3
+  },
+  {
+   "target": 100000,
+   "prompt_tokens": 145884,
+   "ttft_s": 347.495,
+   "prefill_tok_s": 419.8
+  }
+ ]
+}

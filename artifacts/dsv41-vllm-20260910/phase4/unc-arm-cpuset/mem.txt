@@ -1,0 +1,40 @@
+== unc-arm-cpuset start
+               total        used        free      shared  buff/cache   available
+Mem:             121         112           5           7          12           9
+SwapTotal:      16777212 kB
+SwapFree:       15641832 kB
+== anvil
+               total        used        free      shared  buff/cache   available
+Mem:             121         111           8           7          10          10
+SwapTotal:      16777212 kB
+SwapFree:       16359224 kB
+== ember
+               total        used        free      shared  buff/cache   available
+Mem:             121         111           7           7          11          10
+SwapTotal:      16777212 kB
+SwapFree:       16538100 kB
+== flame
+               total        used        free      shared  buff/cache   available
+Mem:             121         111           7           7          11          10
+SwapTotal:      16777212 kB
+SwapFree:       16541028 kB
+== unc-arm-cpuset end
+               total        used        free      shared  buff/cache   available
+Mem:             121         117           1           7          12           4
+SwapTotal:      16777212 kB
+SwapFree:       15679804 kB
+== anvil
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           1           7          13           6
+SwapTotal:      16777212 kB
+SwapFree:       16367144 kB
+== ember
+               total        used        free      shared  buff/cache   available
+Mem:             121         115           1           7          13           6
+SwapTotal:      16777212 kB
+SwapFree:       16544112 kB
+== flame
+               total        used        free      shared  buff/cache   available
+Mem:             121         116           1           7          12           5
+SwapTotal:      16777212 kB
+SwapFree:       16544348 kB

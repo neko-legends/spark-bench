@@ -48,6 +48,11 @@ answers are fast; the *waiting* is the weak spot — cold prefill runs ~1.0–1.
 > The rig boots bimodally (~65 vs ~74 tok/s decode) and that boot-lottery, not any knob, was
 > behind the day's apparent gains. Numbers below are the verified final boot. Warm the world
 > after any relaunch before trusting a measurement.
+>
+> **Update 2026-09-13:** the bimodality now has a prime suspect. With
+> `vm.compaction_proactiveness=0` on all four nodes, **every measured boot landed in fast mode**
+> (73.1 / 73.7 / 73.3 / 77.9 tok/s) — zero slow boots across a night of relaunches. See
+> [host tuning, bimodality and the abliterated A/B](#dsv41-2026-09-13) below.
 
 ![DeepSeek-V4.1-Flash on 4× DGX Spark: 51.1 tok/s single stream mean, 105 tok/s across 4 streams, 4.36 tokens accepted per step, and how the 510 GB fits](docs/images/dsv41-vllm-tp4-x-card-2026-09-10.png)
 
@@ -88,6 +93,66 @@ node's NVMe and each TP rank reads **its own quarter** of the rows on demand, de
 the CPU and staging into the forward pass before it runs. That trick is
 [tonyd2wild's + Kai's](https://github.com/tonyd2wild/DeepSeek-V4.1-Flash-vLLM-DGX-Spark), and
 it's what makes the difference between "does not fit" and 51 tok/s.
+
+<a id="dsv41-2026-09-13"></a>
+### 2026-09-13: host tuning, the boot lottery, and an abliterated A/B
+
+A day of operations findings, all measured on this world. Raw files:
+[`artifacts/dsv41-vllm-20260910/ab-unc-20260913/`](artifacts/dsv41-vllm-20260910/ab-unc-20260913/)
+and the `unc-*` arms under `artifacts/dsv41-vllm-20260910/phase4/`.
+
+**Host tuning that mattered — `vm.compaction_proactiveness=0`.** On a Spark the GPU's memory
+*is* ordinary system pages, so the kernel's background compactor unmaps pages from the GPU as
+it migrates them; a serving box allocates once and gains nothing from the upkeep. We took the
+setting (and its reasoning) from
+[bilikaz's Qwen3.8 GB10 recipe](https://github.com/bilikaz/qwen38-flash-next-cluster-recipe)
+and persisted it with `vm.swappiness=10` in
+[`scripts/99-dsv41-serving.conf`](scripts/99-dsv41-serving.conf). Result: **four measured boots,
+four fast-mode boots** (73.1 / 73.7 / 73.3 / 77.9 tok/s) where the previous week ran ~50/50
+against a ~65 tok/s slow mode. Not yet proof (≈6% by luck), but the first lever that has moved
+the lottery at all.
+
+**Two settings from the same recipe that did *not* transfer**, each tested as a one-variable arm
+with a same-night champion boot as control:
+
+| arm | C1 coding / math / prose | C4 coding | accept len | verdict |
+|---|---|---:|---:|---|
+| champion (control) | 71.9 / 68.9 / 30.9 | **50.9** | 4.29 | — |
+| `--async-scheduling` | 72.8 / 69.9 / 30.7 | 47.0 | **3.44** | rejected — lower at C4, and it disturbs the speculative path |
+| cpuset `5-9,15-19` (the 3.9 GHz cores) | 72.9 / 67.1 / 31.3 | 43.8 | 4.38 | rejected — no gain |
+
+**Abliterated checkpoint A/B.**
+[`dealignai/DeepSeek-V4.1-Flash-UNCENSORED-FP8`](https://huggingface.co/dealignai/DeepSeek-V4.1-Flash-UNCENSORED-FP8)
+is a byte-identical drop-in on paper (same architecture, 96,085 tensors, same quantization block,
+zero config diffs, matching chat template) and boots on this recipe with three env-line changes.
+It **failed two of our gates**: 4 of 30 structured outputs came back **empty** at temperature
+0.7–1.0 (clean at temperature 0), and thinking mode never engaged (no reasoning content with
+thinking on). Tool round-trip 3/3, refusals gone. Fine for direct greedy chat; not a serving
+brain for agents. Gate scripts: [`scripts/ab-uncensored.sh`](scripts/ab-uncensored.sh).
+
+**A wedge class, and the fixes it forced.** Twice in one afternoon the engine stopped generating
+while `/health` and `/v1/models` kept answering — one rank stalled in the decode loop and the TP4
+collective blocked behind it. Candidate triggers: heavy NVMe writes on a serving node (the Engram
+tables are ~51 GiB per rank and cannot be page-cached with ~22 GB free, so every decode step
+reads from disk — a 510 GB download on the same drive is poison), and DSpark Triton kernels
+JIT-compiling mid-inference. Fixes shipped: the launcher now runs a
+[prewarm pass](scripts/dsv41-prewarm.py) before declaring the world up;
+[`dsv41-recover.sh`](scripts/dsv41-recover.sh) requires a real 1-token completion before its
+"API is up" fast path (an API-up check is not a liveness check); the
+[catch-up sidecar](#catch-up-sidecar-optional) gained backpressure (max 2 warms in flight,
+latest snapshot wins, interactive turns first); and the operating rule is now **no bulk writes on
+a serving node**.
+
+**Where this points next: SGLang.** [MiaAI-Lab's
+DeepSeek-v4.1-Flash-DGX-Sparks](https://github.com/MiaAI-Lab/DeepSeek-v4.1-Flash-DGX-Sparks)
+runs the same model on the same hardware on SGLang and publishes **3,350–3,780 tok/s prefill**
+(ours: 1,400–1,660), **45.4 tok/s single-stream prose** (ours ~31), parity at four streams, and a
+**needle-verified 1M context** with an 8M-token KV pin. Their speculative decoding works on
+SGLang; the SGLang Blackwell verify fix (#38879) merged after the image our abandoned SGLang lane
+was built from. A gated re-trial — our corruption repro first, then head-to-head on this harness —
+is the next thing we run. Credit to Mia for the reference numbers and for stating the memory-stall
+mechanism plainly: *host RAM is GPU memory on a Spark; anything that stalls one rank stalls them
+all, because TP is synchronous.*
 
 Run it yourself: [recipe and findings](docs/dsv41-vllm-tp4.md) — image chain, the eight
 bind-mounted patches, launcher env, fabric + clock-lock requirements, and

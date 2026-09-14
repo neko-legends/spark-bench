@@ -1,0 +1,24 @@
+{
+ "label": "unc-arm-async",
+ "seed": 1,
+ "rows": [
+  {
+   "target": 8000,
+   "prompt_tokens": 11699,
+   "ttft_s": 10.889,
+   "prefill_tok_s": 1074.4
+  },
+  {
+   "target": 32000,
+   "prompt_tokens": 46710,
+   "ttft_s": 38.754,
+   "prefill_tok_s": 1205.3
+  },
+  {
+   "target": 100000,
+   "prompt_tokens": 145883,
+   "ttft_s": 116.45,
+   "prefill_tok_s": 1252.7
+  }
+ ]
+}
