@@ -158,6 +158,61 @@ Run it yourself: [recipe and findings](docs/dsv41-vllm-tp4.md) — image chain, 
 bind-mounted patches, launcher env, fabric + clock-lock requirements, and
 [`scripts/dsv41-recover.sh`](scripts/dsv41-recover.sh) for the node-reboot case.
 
+<a id="dsv41-sglang-2026-09-14"></a>
+### 2026-09-14 → 15: the re-trial passed — SGLang is the serving world now
+
+The gated re-trial ran on Mia's kit at
+[`MiaAI-Lab/DeepSeek-v4.1-Flash-DGX-Sparks`](https://github.com/MiaAI-Lab/DeepSeek-v4.1-Flash-DGX-Sparks)
+(image `lmsysorg/sglang:dev-dsv41`, post-#38879) with our `.env.tp4` fabric profile.
+**Every gate passed**: corruption repro 3/3 clean (the bug that killed our first SGLang lane is
+gone), structured outputs 30/30, tool round-trip 3/3, reasoning content present, needle at
+32k / 400k / 1M. Head-to-head on this harness against the vLLM champion, same night, same prompts:
+
+| | SGLang TP4 | vLLM TP4 champion |
+|---|---:|---:|
+| prefill tok/s (5 shapes) | 2243 / 2356 / 2357 / 2166 / 1950 | 1659 / 1477 / 1495 / 1431 / 1416 |
+| C1 coding / prose | 75.95 / 35.7 | 71.9 / 30.9 |
+| C4 coding aggregate | 51.25 | 50.9 |
+| context | **1,048,576** (needle-verified) | 430k (governed) |
+
+Prefill ~1.5×, decode a nose ahead, 1M context for real. Jun: *"sglang is faster, let's stick
+with that."* vLLM stays staged as the fallback. Ops cutover: watchdog and
+[`scripts/dsv41-recover.sh`](scripts/dsv41-recover.sh)-style wrapper retargeted to the SGLang
+world, with one lesson written in blood the same morning — **busy is not wedged**. A world
+mid-prefill of a 215k-token prompt will not answer a 1-token probe inside any short budget; the
+recovery wrapper read that as engine death and killed a healthy world (35 min self-inflicted
+outage). The wrapper now reads SGLang's `/v1/loads` first and only restarts when nothing is
+running *and* nothing is waiting *and* the probe fails.
+
+**Session-pinned KV (2026-09-14).** The serving world runs `--enable-session-radix-cache`:
+requests carrying a top-level `session_id` hold references on their radix KV and eviction
+consumes unreferenced entries first. Measured: a pinned 14k-token prefix stayed warm (0.3–0.4 s
+TTFT) through three ~130k-token unrelated prefills that would have flushed it under global LRU.
+We pin exactly one lane (Eva's), rotating the session id and calling `/close_session` when a
+compaction collapses her prompt — everyone else takes the occasional cold minute by design. The
+corollary that surprised us: on a shared radix tree, *catchup replays and context governance
+are cache policy*. Advertising 1M let lane contexts balloon until one morning queued 460k
+uncached prefill tokens; lanes are now governed at 430k while the world still serves 1M to
+direct callers.
+
+**Mia's 2026-09-15 hardening, adopted with one exception.** Upstream commit `93d9e6b` added an
+output cap for requests that omit `max_tokens` (`DSV41_MAX_NEW_TOKENS=32768` — their incident
+was a frozen harness running a 714k-token vision loop to remaining context), a decode-side
+**loop abort** (n-gram / identical-token / repeated-line, finishes with `finish_reason=stop`;
+the GPU watchdog never fires while tokens keep arriving), the `enable_thinking` alias, and
+publisher-table reasoning budgets (`SGLANG_DSV41_REASONING_EFFORT=75`). All adopted; loop
+abort measured at zero decode cost. **Not adopted: `DSPARK_BLOCK_SIZE` 5→3.** Booted it
+live: the shipped draft config is block 5, the boot logged `DSpark gamma mismatch`, and their
+k=3 evidence is TP3 prose only. We keep k=5.
+
+**A number we had wrong.** Our night table's "decode median 77.2" was measured by
+`bench_decode_full.py`, which needs `/metrics` — which the *serving* world has never exposed.
+It came from a separate metrics-enabled bench boot. Measured on the serving world with the C1
+stream protocol (2048-token completions, temp 0, thinking on *or* off): **43.3–43.6 tok/s
+single stream**, accept len ~2.5 at k=5 — right on Mia's published TP4 figure of 45.4. Four
+restarts and one false-alarm bisection to learn that non-streaming wall time includes prefill.
+Write the protocol down before you compare numbers.
+
 ---
 
 <a id="qwen-3-8-flash"></a>

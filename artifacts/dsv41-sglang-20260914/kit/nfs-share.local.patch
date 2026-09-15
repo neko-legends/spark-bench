@@ -1,0 +1,29 @@
+diff --git a/files/nfs-share.sh b/files/nfs-share.sh
+index 19d1531..bd13435 100644
+--- a/files/nfs-share.sh
++++ b/files/nfs-share.sh
+@@ -22,7 +22,7 @@ nfs_server_ip_for() {
+   # Per-worker override: NFS_SERVER_IPS="10.0.22.1 10.0.23.1 ..." (one entry per
+   # worker, or a single entry used for all, e.g. behind a switch), else the legacy
+   # NFS_SERVER_IP_<n>, else NFS_SERVER_IP.
+-  local explicit="" -a _nfs_ips=()
++  local explicit=""; local -a _nfs_ips=()
+   if [[ -n "${NFS_SERVER_IPS:-}" ]]; then
+     read -r -a _nfs_ips <<<"$(tr ',' ' ' <<<"$NFS_SERVER_IPS")"
+     if [[ ${#_nfs_ips[@]} -eq 1 ]]; then explicit="${_nfs_ips[0]}"; else explicit="${_nfs_ips[$idx]:-}"; fi
+@@ -99,7 +99,14 @@ nfs_ensure_server() {
+   if [[ -n "$live" ]] && nfs_rpc_ready 127.0.0.1; then
+     info "NFS already up ($live) — adding spark2/spark3 CX7 clients"
+     nfs_write_exports "$live" "$clients"
+-    NFS_REUSE_EXPORT=1
++    if [[ "$live" == "dsv41-nfs" ]]; then
++      # This kit's own exporter serves MODEL_DIR at the export root (fsid=0),
++      # so the volume device is ":/" -- not the HF-cache subpath that the
++      # vllm-fn-nfs / glm53-nfs reuse path publishes into.
++      NFS_REUSE_EXPORT=0
++    else
++      NFS_REUSE_EXPORT=1
++    fi
+     NFS_LIVE_CTN="$live"
+     return 0
+   fi
