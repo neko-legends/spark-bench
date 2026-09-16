@@ -1,4 +1,4 @@
-# DSV4.1-Flash on SGLang TP4 — serving world since 2026-09-14
+# DSV4.1-Flash on SGLang TP4 — serving world since 2026-09-14 (uncensored checkpoint since 2026-09-15)
 
 Snapshot of how the 4× DGX Spark serving world is actually configured, so the
 next person (or agent) can rebuild it without archaeology. Narrative and
@@ -11,6 +11,9 @@ numbers: the `2026-09-14 → 15` section of the top-level README.
 | `kit/nfs-share.local.patch` | our one local patch to the kit (`local -a` fix + dsv41-nfs exporter reuse) — reapply after `git pull` |
 | `kit/recover-sglang.sh` | forge-side recovery entry: stop → memory drain → **share before serve** → serve → probe → prewarm |
 | `../../scripts/dsv41-recover-sglang.sh` | nest/watchdog-side wrapper: `/v1/loads` busy-vs-wedged check before any restart |
+| `kit/env.tp4.uncensored.redacted` | the **serving profile since 2026-09-15**: abliterated FP8 checkpoint, workers on local bind volumes (`NFS_SHARE=0`, `NFS_VOLUME=dsv41-weights-unc`), own Engram pack (`*-engram-unc`) |
+| `kit/unc-trial.sh` | checkpoint-swap runbook: stop → profile → local volumes → pack (once) → serve → gates → **keep or auto-revert** |
+| `gates/` | the gates themselves: `rawgen3.py` (G0 DSML corruption, run inside the head container), `v41gate.py` (G1 30-gen structured across temps), `gates-tool.sh g2\|g3` (tools, reasoning), `v41needle.py` (context needle); plus the run-3 pass log |
 
 Restart procedure (≈20 min: 8 min weight read + draft + KV + CUDA graphs + prewarm):
 
@@ -26,3 +29,7 @@ diff `.env.tp4.example` against `kit/env.tp4.redacted`, merge knobs you want, `.
 (rebuilds the overlay image on all nodes while serving continues), then the restart above.
 Measure with `scripts/bench-decode.py`'s stream protocol — **not** non-streaming wall time,
 which includes prefill and cost us a false-alarm bisection on 2026-09-15.
+
+Pre-packed Engram shards for this exact layout (TP=4) are on Hugging Face:
+[neko-legends/DeepSeek-V4.1-Flash-engram-4x-spark](https://huggingface.co/neko-legends/DeepSeek-V4.1-Flash-engram-4x-spark).
+For the standard (censored) checkpoint, use [Mia's recipe](https://github.com/MiaAI-Lab/DeepSeek-v4.1-Flash-DGX-Sparks) unchanged.

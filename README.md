@@ -1,10 +1,16 @@
 # spark-bench
 
-> ### 4 DGX Sparks. Four model lanes. One shared TP4 cluster.
-> **DeepSeek V4.1 Flash · native FP4/FP8, 420k context:** **51.1 tok/s C1 mean** across eight task categories (**61–73 tok/s on code and math**), **~105 tok/s aggregate at four streams**, DSpark k=5 with greedy draft — 510 GB of weights made to fit by keeping the 203 GB Engram tables on local NVMe per rank (2026-09-10 PDT, final tables, A/B/A-verified).
-> **Qwen 3.8 Flash Next · official NVIDIA NVFP4:** **91.3 tok/s single-stream code** and **600.5 tok/s aggregate at 16 streams** with MTP k=4 + GEMV (2026-09-06 PDT upgrade; medians of three repeats).
-> Native **262,144-token context**, **4.02M-token bf16 KV pool**. Preliminary workload-specific results—not a throughput guarantee.
-> **→ [DeepSeek V4.1 configs & measurements](#deepseek-v4-1-flash)** · [Qwen configs & measurements](#qwen-3-8-flash) · [GLM archive](#glm-5-3-flash) · [DeepSeek V4 archive](#deepseek-v4-flash)
+> ### 4 DGX Sparks. One shared TP4 world. Now serving: DeepSeek V4.1 Flash, **uncensored**, on SGLang.
+> **What's live (2026-09-16):** the abliterated checkpoint
+> [`dealignai/DeepSeek-V4.1-Flash-UNCENSORED-FP8`](https://huggingface.co/dealignai/DeepSeek-V4.1-Flash-UNCENSORED-FP8)
+> under [Mia's SGLang kit](https://github.com/MiaAI-Lab/DeepSeek-v4.1-Flash-DGX-Sparks) — **1M context, needle-verified**,
+> DSpark k=5, ~43 tok/s single stream (Mia's published 45.4), prefill ~1.5× our vLLM champion, tools + thinking on,
+> **every gate green** (30/30 structured across temp 0/0.7/1.0, tool round-trip 3/3, reasoning engages, no DSML corruption).
+> The refusals are gone; nothing else changed.
+> **Skip the Engram pack:** our pre-packed shards are on Hugging Face —
+> [neko-legends/DeepSeek-V4.1-Flash-engram-4x-spark](https://huggingface.co/neko-legends/DeepSeek-V4.1-Flash-engram-4x-spark) (192 GB, TP=4).
+> **Want the standard (censored) checkpoint?** Use [Mia's recipe](https://github.com/MiaAI-Lab/DeepSeek-v4.1-Flash-DGX-Sparks) as-is — it is the same world; only the checkpoint and the Engram pack differ.
+> **→ [How we run it, and the fixes it took](#dsv41-sglang-2026-09-14)** · [vLLM champion archive](#deepseek-v4-1-flash) · [Qwen](#qwen-3-8-flash) · [GLM archive](#glm-5-3-flash) · [DeepSeek V4 archive](#deepseek-v4-flash)
 
 Running big MoE models across **four NVIDIA DGX Sparks** (GB10) as one TP=4
 world over a switched CX-7 RoCE fabric — the recipes, the launchers, the
@@ -16,7 +22,8 @@ prerequisites, reproduction limits and operator/agent handoff instructions:
 
 | Lane | Stack | Status | Headline (this cluster) |
 |---|---|---|---|
-| **[DeepSeek V4.1 Flash](#deepseek-v4-1-flash)** | vLLM · native FP4 experts / FP8 dense · TP4+EP · DSpark k=5 greedy draft · Engram on NVMe · 420k ctx | **serving · campaign in progress** (`forge:8000`) | 51.1 tok/s C1 mean (code 61–71, math 73) · ~105 tok/s aggregate @4 · cold prefill ~1.5k tok/s · sequence cap 4 |
+| **[DeepSeek V4.1 Flash — uncensored](#dsv41-sglang-2026-09-14)** | **SGLang (Mia kit)** · abliterated FP8 checkpoint · TP4+EP4 · DSpark k=5 · Engram on NVMe (pre-packed on HF) · **1M ctx** · session-radix KV | **serving** (`forge:8000`) since 2026-09-15 | ~43 tok/s single stream · prefill 2.2k tok/s · 8 seats · all gates green |
+| [DeepSeek V4.1 Flash — vLLM champion](#deepseek-v4-1-flash) | vLLM · native FP4 experts / FP8 dense · TP4+EP · DSpark k=5 greedy draft · Engram on NVMe · 420k ctx | staged fallback; recipe and results retained | 51.1 tok/s C1 mean (code 61–71, math 73) · ~105 tok/s aggregate @4 · cold prefill ~1.5k tok/s |
 | **[Qwen 3.8 Flash Next](#qwen-3-8-flash)** | vLLM · official NVIDIA NVFP4 · TP4+EP · MTP k=4 + GEMV · 262k ctx | **stopped 2026-09-10** (world moved to DeepSeek V4.1 Flash); recipe and results retained | 91.3 tok/s C1 code · 600.5 tok/s aggregate @16; C1 prose −7.9% vs fresh k2 baseline |
 | **[GLM 5.3 Flash](#glm-5-3-flash)** | vLLM · EXL3 4bpw · DFlash2 · 1M ctx | stopped; recipe and results retained | 128.9 tok/s 4-stream agg · 1560 tok/s cold prefill @100k · 96 tok/s structured C1 |
 | **[DeepSeek V4 Flash](#deepseek-v4-flash)** | vLLM · abliterated NVFP4 · MTP | recipe kept, not serving | 136 tok/s C1 median (145.5 peak) · 290.3 engine record · 182 tok/s C4 |
@@ -160,6 +167,43 @@ bind-mounted patches, launcher env, fabric + clock-lock requirements, and
 
 <a id="dsv41-sglang-2026-09-14"></a>
 ### 2026-09-14 → 15: the re-trial passed — SGLang is the serving world now
+
+**If you only read one list — the things that were not in any recipe:**
+
+1. **The corruption gate.** Our first SGLang lane (pre-#38879 image) garbled the DSML tool-call
+   markup on the second turn of a tool exchange. `gates/rawgen3.py` (in the kit trial dir) renders
+   a tool round-trip prompt with the server's own encoder and checks the raw generation. Run it
+   3× on any new image before anything else — it's the difference between "works" and "works
+   until an agent uses a tool."
+2. **Busy is not wedged.** A 200k+-token prefill will not answer a 1-token probe inside any short
+   budget. Our recovery wrapper read that as engine death and killed a healthy world (35 min
+   outage). Read `/v1/loads` first; restart only when nothing is running *and* nothing is
+   waiting *and* the probe fails.
+3. **The NFS exporter is unkillable.** `dsv41-nfs` holds kernel nfsd state; `docker rm -f`
+   returns "did not receive an exit event" while any worker has the export mounted. You cannot
+   re-point it live. For a second checkpoint, **bind-mount the local copy on each worker as a
+   docker volume** (`--driver local --opt type=none --opt o=bind`) and set `NFS_SHARE=0` — faster
+   boot, exporter untouched.
+4. **`start.sh serve` can hang after Ready.** The engine prints `Ready: API on port 8000`, serves
+   fine, and the kit's readiness loop never exits. Wrap it in a timeout; judge health by a real
+   1-token completion, never by the script returning.
+5. **A separate Engram pack per checkpoint.** The tables are derived from the weights, so the
+   abliterated checkpoint needs its own pack (`ENGRAM_DIR` / `WORKER_ENGRAM_DIR` pointed at a
+   sibling dir). Keep both packs; a checkpoint swap is then a profile flip. Ours are published
+   (TP=4) so you can skip the ~10 min/node pack:
+   [neko-legends/DeepSeek-V4.1-Flash-engram-4x-spark](https://huggingface.co/neko-legends/DeepSeek-V4.1-Flash-engram-4x-spark).
+6. **Never bulk-write NVMe on a serving node.** Engram reads disk every decode step; a pack or a
+   large copy on a live node stalls one rank and the TP collective behind it. Pack with the
+   world stopped.
+7. **Don't measure decode with wall-clock.** Non-streaming wall time includes prefill; it cost us
+   a false-alarm bisection. Stream, count usage tokens between first and last delta.
+8. **`DSPARK_BLOCK_SIZE` 5→3 from upstream: don't.** The shipped draft is block 5; k=3 logs a
+   gamma mismatch. Take the rest of Mia's 2026-09-15 hardening (output cap, loop abort, thinking
+   alias, reasoning budgets); keep k=5.
+
+Runbooks: [`artifacts/dsv41-sglang-20260914/`](artifacts/dsv41-sglang-20260914/) (profile,
+local patch, restart/update procedure) and the checkpoint-swap trial script `unc-trial.sh`
+(gates, auto-revert) described below.
 
 The gated re-trial ran on Mia's kit at
 [`MiaAI-Lab/DeepSeek-v4.1-Flash-DGX-Sparks`](https://github.com/MiaAI-Lab/DeepSeek-v4.1-Flash-DGX-Sparks)
