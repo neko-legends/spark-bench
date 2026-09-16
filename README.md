@@ -203,6 +203,11 @@ bind-mounted patches, launcher env, fabric + clock-lock requirements, and
    (+14% / +16%); a second k=3 boot read 32.8 / 68.6. The `DSpark gamma mismatch` line is a
    warning, not an error — Mia's EXL3 kit runs k=3 against the same block-5 draft on purpose.
    **Serving at k=3 now.**
+   Note the workload bimodality, visible in the raw runs: prose prompts decode ~31–34 (DSpark
+   accepts ~0.3 on prose) while code/math land ~52–60. k=5 read `[29.2, 59.7, 54.5, 30.1, 30.2]`;
+   k=3 read `[34.4, 55.0, 51.9, 31.6, 33.6]` — same four prompt classes, one variable. Prose +3–4,
+   code even, aggregate +16%. Compare medians to medians; 34.4 (prose median) vs 57 (a code run)
+   is not a regression, it's a different prompt.
 9. **The DSpark SPS cost table does not work with Engram (yet).** Profiling it takes a dedicated
    boot (`SGLANG_DSPARK_ENABLE_SPS_RECORD=1 SGLANG_SIMULATE_ACC_LEN=1.0 SGLANG_RAGGED_VERIFY_MODE=static`,
    `SKIP_SMOKE=1` because simulated acceptance breaks the smoke's exact-answer check), and the
