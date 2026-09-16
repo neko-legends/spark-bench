@@ -1,0 +1,16 @@
+[2026-09-15T21:15:50-07:00] trial start: stopping censored world
+[2026-09-15T21:16:42-07:00] weights: verifying local bind volume dsv41-weights-unc on all workers
+[2026-09-15T21:16:44-07:00] weights: all workers mount the uncensored checkpoint locally
+[2026-09-15T21:16:45-07:00] pack: Engram shards → engram-unc on all 4 nodes (world is stopped; bulk NVMe writes are safe now)
+[2026-09-15T21:23:28-07:00] serve: booting uncensored world
+[2026-09-15T22:03:28-07:00] start-tp4.sh serve returned non-zero/timeout — verifying health independently
+[2026-09-15T22:03:45-07:00] serve: up. running gates
+[2026-09-15T22:03:48-07:00] G0 run1 PASS
+[2026-09-15T22:03:49-07:00] G0 run2 PASS
+[2026-09-15T22:03:51-07:00] G0 run3 PASS
+[2026-09-15T22:03:59-07:00] G1: 30/30 clean (0 garbled)
+[2026-09-15T22:04:03-07:00] G2: TOOL_ROUNDTRIP 3/3
+[2026-09-15T22:04:06-07:00] G3: REASONING_PARSER PASS
+[2026-09-15T22:08:40-07:00] G4 needle: 2/2 pass
+[2026-09-15T22:08:40-07:00] VERDICT: ALL GATES PASS — uncensored world left SERVING (Jun decides whether it stays). Revert: cp .env.tp4.censored .env.tp4 && restart.
+[2026-09-15T22:08:40-07:00] trial done
