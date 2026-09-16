@@ -8,7 +8,7 @@
 > **every gate green** (30/30 structured across temp 0/0.7/1.0, tool round-trip 3/3, reasoning engages, no DSML corruption).
 > The refusals are gone; nothing else changed.
 > **Skip the Engram pack:** our pre-packed shards are on Hugging Face —
-> [neko-legends/DeepSeek-V4.1-Flash-engram-4x-spark](https://huggingface.co/neko-legends/DeepSeek-V4.1-Flash-engram-4x-spark) (192 GB, TP=4).
+> [neko-legends/DeepSeek-V4.1-Flash-uncensored-engram-4x-spark](https://huggingface.co/neko-legends/DeepSeek-V4.1-Flash-uncensored-engram-4x-spark) (192 GB, TP=4).
 > **Want the standard (censored) checkpoint?** Use [Mia's recipe](https://github.com/MiaAI-Lab/DeepSeek-v4.1-Flash-DGX-Sparks) as-is — it is the same world; only the checkpoint and the Engram pack differ.
 > **→ [How we run it, and the fixes it took](#dsv41-sglang-2026-09-14)** · [vLLM champion archive](#deepseek-v4-1-flash) · [Qwen](#qwen-3-8-flash) · [GLM archive](#glm-5-3-flash) · [DeepSeek V4 archive](#deepseek-v4-flash)
 
@@ -191,7 +191,7 @@ bind-mounted patches, launcher env, fabric + clock-lock requirements, and
    abliterated checkpoint needs its own pack (`ENGRAM_DIR` / `WORKER_ENGRAM_DIR` pointed at a
    sibling dir). Keep both packs; a checkpoint swap is then a profile flip. Ours are published
    (TP=4) so you can skip the ~10 min/node pack:
-   [neko-legends/DeepSeek-V4.1-Flash-engram-4x-spark](https://huggingface.co/neko-legends/DeepSeek-V4.1-Flash-engram-4x-spark).
+   [neko-legends/DeepSeek-V4.1-Flash-uncensored-engram-4x-spark](https://huggingface.co/neko-legends/DeepSeek-V4.1-Flash-uncensored-engram-4x-spark).
 6. **Never bulk-write NVMe on a serving node.** Engram reads disk every decode step; a pack or a
    large copy on a live node stalls one rank and the TP collective behind it. Pack with the
    world stopped.
@@ -280,7 +280,7 @@ checkpoint on workers as **local bind volumes** (no NFS — the exporter can't b
 live; kernel nfsd state makes the container unkillable) and reads Engram from its own
 `dsv41-engram-unc/` pack. Runbook: `forge:~/dsv41-sglang-trial-20260914/unc-trial.sh`
 (auto-reverts to the censored checkpoint on any gate failure). The Engram packs are published:
-[neko-legends/DeepSeek-V4.1-Flash-engram-4x-spark](https://huggingface.co/neko-legends/DeepSeek-V4.1-Flash-engram-4x-spark)
+[neko-legends/DeepSeek-V4.1-Flash-uncensored-engram-4x-spark](https://huggingface.co/neko-legends/DeepSeek-V4.1-Flash-uncensored-engram-4x-spark)
 — 192 GB, TP=4 only, skips the ~10-min-per-node pack step.
 
 

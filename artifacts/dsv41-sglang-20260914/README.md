@@ -31,5 +31,5 @@ Measure with `scripts/bench-decode.py`'s stream protocol — **not** non-streami
 which includes prefill and cost us a false-alarm bisection on 2026-09-15.
 
 Pre-packed Engram shards for this exact layout (TP=4) are on Hugging Face:
-[neko-legends/DeepSeek-V4.1-Flash-engram-4x-spark](https://huggingface.co/neko-legends/DeepSeek-V4.1-Flash-engram-4x-spark).
+[neko-legends/DeepSeek-V4.1-Flash-uncensored-engram-4x-spark](https://huggingface.co/neko-legends/DeepSeek-V4.1-Flash-uncensored-engram-4x-spark).
 For the standard (censored) checkpoint, use [Mia's recipe](https://github.com/MiaAI-Lab/DeepSeek-v4.1-Flash-DGX-Sparks) unchanged.
