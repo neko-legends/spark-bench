@@ -4,7 +4,7 @@
 > **What's live (2026-09-16):** the abliterated checkpoint
 > [`dealignai/DeepSeek-V4.1-Flash-UNCENSORED-FP8`](https://huggingface.co/dealignai/DeepSeek-V4.1-Flash-UNCENSORED-FP8)
 > under [Mia's SGLang kit](https://github.com/MiaAI-Lab/DeepSeek-v4.1-Flash-DGX-Sparks) — **1M context, needle-verified**,
-> DSpark k=5, ~43 tok/s single stream (Mia's published 45.4), prefill ~1.5× our vLLM champion, tools + thinking on,
+> DSpark **k=3** (+14% over k=5, stream-measured), ~33–43 tok/s single stream depending on workload, prefill ~1.5× our vLLM champion, tools + thinking on,
 > **every gate green** (30/30 structured across temp 0/0.7/1.0, tool round-trip 3/3, reasoning engages, no DSML corruption).
 > The refusals are gone; nothing else changed.
 > **Skip the Engram pack:** our pre-packed shards are on Hugging Face —
@@ -22,7 +22,7 @@ prerequisites, reproduction limits and operator/agent handoff instructions:
 
 | Lane | Stack | Status | Headline (this cluster) |
 |---|---|---|---|
-| **[DeepSeek V4.1 Flash — uncensored](#dsv41-sglang-2026-09-14)** | **SGLang (Mia kit)** · abliterated FP8 checkpoint · TP4+EP4 · DSpark k=5 · Engram on NVMe (pre-packed on HF) · **1M ctx** · session-radix KV | **serving** (`forge:8000`) since 2026-09-15 | ~43 tok/s single stream · prefill 2.2k tok/s · 8 seats · all gates green |
+| **[DeepSeek V4.1 Flash — uncensored](#dsv41-sglang-2026-09-14)** | **SGLang (Mia kit)** · abliterated FP8 checkpoint · TP4+EP4 · DSpark k=3 · Engram on NVMe (pre-packed on HF) · **1M ctx** · session-radix KV | **serving** (`forge:8000`) since 2026-09-15 | k=3: 33 tok/s prose / 54 code single · **68.6 tok/s agg@4** · prefill 2.2k tok/s · 8 seats · all gates green |
 | [DeepSeek V4.1 Flash — vLLM champion](#deepseek-v4-1-flash) | vLLM · native FP4 experts / FP8 dense · TP4+EP · DSpark k=5 greedy draft · Engram on NVMe · 420k ctx | staged fallback; recipe and results retained | 51.1 tok/s C1 mean (code 61–71, math 73) · ~105 tok/s aggregate @4 · cold prefill ~1.5k tok/s |
 | **[Qwen 3.8 Flash Next](#qwen-3-8-flash)** | vLLM · official NVIDIA NVFP4 · TP4+EP · MTP k=4 + GEMV · 262k ctx | **stopped 2026-09-10** (world moved to DeepSeek V4.1 Flash); recipe and results retained | 91.3 tok/s C1 code · 600.5 tok/s aggregate @16; C1 prose −7.9% vs fresh k2 baseline |
 | **[GLM 5.3 Flash](#glm-5-3-flash)** | vLLM · EXL3 4bpw · DFlash2 · 1M ctx | stopped; recipe and results retained | 128.9 tok/s 4-stream agg · 1560 tok/s cold prefill @100k · 96 tok/s structured C1 |
@@ -197,9 +197,22 @@ bind-mounted patches, launcher env, fabric + clock-lock requirements, and
    world stopped.
 7. **Don't measure decode with wall-clock.** Non-streaming wall time includes prefill; it cost us
    a false-alarm bisection. Stream, count usage tokens between first and last delta.
-8. **`DSPARK_BLOCK_SIZE` 5→3 from upstream: don't.** The shipped draft is block 5; k=3 logs a
-   gamma mismatch. Take the rest of Mia's 2026-09-15 hardening (output cap, loop abort, thinking
-   alias, reasoning budgets); keep k=5.
+8. **`DSPARK_BLOCK_SIZE` 5→3: yes, once measured properly.** Our first rejection (2026-09-15)
+   was based on the polluted wall-clock bench. Stream-measured on the uncensored world, same
+   boot class, one variable (2026-09-16): **k=5 30.2 tok/s single / 58.6 agg@4 → k=3 34.4 / 67.8**
+   (+14% / +16%); a second k=3 boot read 32.8 / 68.6. The `DSpark gamma mismatch` line is a
+   warning, not an error — Mia's EXL3 kit runs k=3 against the same block-5 draft on purpose.
+   **Serving at k=3 now.**
+9. **The DSpark SPS cost table does not work with Engram (yet).** Profiling it takes a dedicated
+   boot (`SGLANG_DSPARK_ENABLE_SPS_RECORD=1 SGLANG_SIMULATE_ACC_LEN=1.0 SGLANG_RAGGED_VERIFY_MODE=static`,
+   `SKIP_SMOKE=1` because simulated acceptance breaks the smoke's exact-answer check), and the
+   kit's env allowlist has to be patched to forward those three. The fit succeeds — and then the
+   world **fails to boot** with the table loaded: compact ragged verify hands the Engram layer a
+   ragged batch (`engram target-verify expects one equal block per request, got 28 tokens for 8
+   requests of 4`). The Engram forward assumes a fixed verify block; ragged verify violates it.
+   Table parked as `dspark_sps.json.ENGRAM-INCOMPATIBLE-20260916`; nothing to gain here until
+   upstream teaches `layers/engram.py` ragged blocks. Two restarts to learn it; written down so
+   nobody pays a third.
 
 Runbooks: [`artifacts/dsv41-sglang-20260914/`](artifacts/dsv41-sglang-20260914/) (profile,
 local patch, restart/update procedure) and the checkpoint-swap trial script `unc-trial.sh`

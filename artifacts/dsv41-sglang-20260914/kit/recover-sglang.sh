@@ -78,8 +78,18 @@ done
 # share BEFORE serve (2026-09-14 lesson): the workers read the checkpoint from a docker
 # volume backed by this node's NFSv4 export. If the exporter is gone, `serve`'s readiness
 # probe blocks forever inside `docker run -v dsv41-weights:/m`, and the boot looks hung.
-./start-tp4.sh share >>"$LOG" 2>&1 || say "share step reported an error (continuing)"
-./start-tp4.sh serve >>"$LOG" 2>&1 || true
+# 2026-09-16: the uncensored profile mounts the checkpoint as LOCAL bind volumes on the
+# workers (NFS_SHARE=0) — never touch the exporter then (it is unkillable and serves the
+# censored dir; run 2 of the swap trial died on exactly that).
+if grep -qE '^NFS_SHARE=0' "$KIT/.env.tp4"; then
+  say "NFS_SHARE=0 (local worker volumes) — skipping share"
+else
+  ./start-tp4.sh share >>"$LOG" 2>&1 || say "share step reported an error (continuing)"
+fi
+# start-tp4.sh serve can hang after the engine prints Ready (readiness loop never exits,
+# 2026-09-15 x3). Bound it; health is judged by the completion probe below, not by serve.
+timeout 2700 ./start-tp4.sh serve >>"$LOG" 2>&1 || true
+pkill -f "start.sh serve" 2>/dev/null || true
 for i in $(seq 1 90); do
   if probe_ok; then
     say "RECOVERED: SGLang serving $MODEL on $API"
