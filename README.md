@@ -213,6 +213,20 @@ single stream**, accept len ~2.5 at k=5 — right on Mia's published TP4 figure 
 restarts and one false-alarm bisection to learn that non-streaming wall time includes prefill.
 Write the protocol down before you compare numbers.
 
+**The abliterated checkpoint re-passed on SGLang (2026-09-15) and is now the serving brain.**
+[`dealignai/DeepSeek-V4.1-Flash-UNCENSORED-FP8`](https://huggingface.co/dealignai/DeepSeek-V4.1-Flash-UNCENSORED-FP8)
+under Mia's SGLang TP4 world: G0 corruption 3/3, G1 structured **30/30 across temp 0/0.7/1.0**
+(the vLLM-era empties at temp>0 did not reproduce — runtime, not weights), tools 3/3,
+**reasoning mode engages** (the other vLLM failure, also gone), needle 32k/400k. Both original
+failures were vLLM-side. Swapping is a profile flip: `mia/.env.tp4.uncensored` mounts the
+checkpoint on workers as **local bind volumes** (no NFS — the exporter can't be re-pointed
+live; kernel nfsd state makes the container unkillable) and reads Engram from its own
+`dsv41-engram-unc/` pack. Runbook: `forge:~/dsv41-sglang-trial-20260914/unc-trial.sh`
+(auto-reverts to the censored checkpoint on any gate failure). The Engram packs are published:
+[neko-legends/DeepSeek-V4.1-Flash-engram-4x-spark](https://huggingface.co/neko-legends/DeepSeek-V4.1-Flash-engram-4x-spark)
+— 192 GB, TP=4 only, skips the ~10-min-per-node pack step.
+
+
 ---
 
 <a id="qwen-3-8-flash"></a>
