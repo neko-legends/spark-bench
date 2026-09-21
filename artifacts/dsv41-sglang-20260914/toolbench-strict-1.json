@@ -1,0 +1,286 @@
+{
+ "label": "strict-1",
+ "single": [
+  {
+   "prompt": "What's the weather like in Sapporo right",
+   "ttft": 49.573002338409424,
+   "toks": 49,
+   "tok_s": 51.879486235790125,
+   "calls": 1,
+   "names": [
+    "get_weather"
+   ],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "tool_calls",
+   "content_chars": 50
+  },
+  {
+   "prompt": "Create a task titled 'pin blender mcp so",
+   "ttft": 0.3489036560058594,
+   "toks": 66,
+   "tok_s": 51.74331862664833,
+   "calls": 1,
+   "names": [
+    "create_task"
+   ],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "tool_calls",
+   "content_chars": 32
+  },
+  {
+   "prompt": "Query the messages table for the 5 most ",
+   "ttft": 0.32793760299682617,
+   "toks": 58,
+   "tok_s": 51.473228358285695,
+   "calls": 1,
+   "names": [
+    "run_sql"
+   ],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "tool_calls",
+   "content_chars": 57
+  },
+  {
+   "prompt": "Create three tasks in one go: 'bench xgr",
+   "ttft": 0.3410828113555908,
+   "toks": 106,
+   "tok_s": 51.06412921195067,
+   "calls": 3,
+   "names": [
+    "create_task",
+    "create_task",
+    "create_task"
+   ],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "tool_calls",
+   "content_chars": 38
+  },
+  {
+   "prompt": "Explain in ~150 words why speculative de",
+   "ttft": 0.35300779342651367,
+   "toks": 187,
+   "tok_s": 33.213761819675874,
+   "calls": 0,
+   "names": [],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "stop",
+   "content_chars": 1006
+  },
+  {
+   "prompt": "Write a short paragraph about a stone ro",
+   "ttft": 0.34301042556762695,
+   "toks": 122,
+   "tok_s": 33.45467126715581,
+   "calls": 0,
+   "names": [],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "stop",
+   "content_chars": 569
+  },
+  {
+   "prompt": "Create a task whose title is exactly: He",
+   "ttft": 0.35331153869628906,
+   "toks": 84,
+   "tok_s": 48.895170748624935,
+   "calls": 1,
+   "names": [
+    "create_task"
+   ],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "tool_calls",
+   "content_chars": 52
+  },
+  {
+   "prompt": "Run this SQL exactly: SELECT id, content",
+   "ttft": 0.3563520908355713,
+   "toks": 144,
+   "tok_s": 47.8148874895441,
+   "calls": 1,
+   "names": [
+    "run_sql"
+   ],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "tool_calls",
+   "content_chars": 276
+  },
+  {
+   "prompt": "What's the weather like in Sapporo right",
+   "ttft": 0.32743382453918457,
+   "toks": 49,
+   "tok_s": 52.3426882661662,
+   "calls": 1,
+   "names": [
+    "get_weather"
+   ],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "tool_calls",
+   "content_chars": 50
+  },
+  {
+   "prompt": "Create a task titled 'pin blender mcp so",
+   "ttft": 0.34006738662719727,
+   "toks": 66,
+   "tok_s": 51.73133811245991,
+   "calls": 1,
+   "names": [
+    "create_task"
+   ],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "tool_calls",
+   "content_chars": 32
+  },
+  {
+   "prompt": "Query the messages table for the 5 most ",
+   "ttft": 0.33034420013427734,
+   "toks": 58,
+   "tok_s": 51.332053072109964,
+   "calls": 1,
+   "names": [
+    "run_sql"
+   ],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "tool_calls",
+   "content_chars": 57
+  },
+  {
+   "prompt": "Create three tasks in one go: 'bench xgr",
+   "ttft": 0.3526010513305664,
+   "toks": 106,
+   "tok_s": 51.250651474396705,
+   "calls": 3,
+   "names": [
+    "create_task",
+    "create_task",
+    "create_task"
+   ],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "tool_calls",
+   "content_chars": 38
+  },
+  {
+   "prompt": "Explain in ~150 words why speculative de",
+   "ttft": 0.33702898025512695,
+   "toks": 178,
+   "tok_s": 30.80257939475395,
+   "calls": 0,
+   "names": [],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "stop",
+   "content_chars": 970
+  },
+  {
+   "prompt": "Write a short paragraph about a stone ro",
+   "ttft": 0.3334348201751709,
+   "toks": 131,
+   "tok_s": 30.2692139308701,
+   "calls": 0,
+   "names": [],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "stop",
+   "content_chars": 589
+  },
+  {
+   "prompt": "Create a task whose title is exactly: He",
+   "ttft": 0.36354732513427734,
+   "toks": 84,
+   "tok_s": 49.0972108552412,
+   "calls": 1,
+   "names": [
+    "create_task"
+   ],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "tool_calls",
+   "content_chars": 52
+  },
+  {
+   "prompt": "Run this SQL exactly: SELECT id, content",
+   "ttft": 0.35767245292663574,
+   "toks": 195,
+   "tok_s": 48.9201701360428,
+   "calls": 1,
+   "names": [
+    "run_sql"
+   ],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "tool_calls",
+   "content_chars": 467
+  }
+ ],
+ "agg": [
+  {
+   "prompt": "What's the weather like in Sapporo right",
+   "ttft": 0.6826357841491699,
+   "toks": 49,
+   "tok_s": 28.82821853972356,
+   "calls": 1,
+   "names": [
+    "get_weather"
+   ],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "tool_calls",
+   "content_chars": 50
+  },
+  {
+   "prompt": "Create a task titled 'pin blender mcp so",
+   "ttft": 0.6825838088989258,
+   "toks": 59,
+   "tok_s": 30.72876097238727,
+   "calls": 1,
+   "names": [
+    "create_task"
+   ],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "tool_calls",
+   "content_chars": 2
+  },
+  {
+   "prompt": "Query the messages table for the 5 most ",
+   "ttft": 0.6824483871459961,
+   "toks": 58,
+   "tok_s": 30.208834796775832,
+   "calls": 1,
+   "names": [
+    "run_sql"
+   ],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "tool_calls",
+   "content_chars": 57
+  },
+  {
+   "prompt": "Create three tasks in one go: 'bench xgr",
+   "ttft": 0.6810791492462158,
+   "toks": 106,
+   "tok_s": 36.71615577427978,
+   "calls": 3,
+   "names": [
+    "create_task",
+    "create_task",
+    "create_task"
+   ],
+   "valid_json_schema": true,
+   "expected_met": true,
+   "finish": "tool_calls",
+   "content_chars": 38
+  }
+ ],
+ "agg_s": 3.5776121616363525
+}

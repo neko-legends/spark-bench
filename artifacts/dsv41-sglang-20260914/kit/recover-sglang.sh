@@ -92,6 +92,11 @@ timeout 2700 ./start-tp4.sh serve >>"$LOG" 2>&1 || true
 pkill -f "start.sh serve" 2>/dev/null || true
 for i in $(seq 1 90); do
   if probe_ok; then
+    # 2026-09-21: SGLANG_TOOL_STRICT_LEVEL=1 means the first tool-bearing request after boot pays
+    # xgrammar JIT + grammar compile (~50s observed cold). Warm it with a throwaway toolset so the
+    # first agent message does not stall; per-toolset compiles (~2-6s) are cached after first use.
+    curl -s -m 180 -o /dev/null http://127.0.0.1:8000/v1/chat/completions -H "Content-Type: application/json" \
+      -d '{"model":"deepseek-v4.1-flash","messages":[{"role":"user","content":"Call ping with msg hi."}],"tools":[{"type":"function","function":{"name":"ping","parameters":{"type":"object","properties":{"msg":{"type":"string"}},"required":["msg"]}}}],"tool_choice":"auto","max_tokens":30,"chat_template_kwargs":{"enable_thinking":false}}' || true
     say "RECOVERED: SGLang serving $MODEL on $API"
     # prewarm: the first real inference otherwise pays the Triton JIT cost (2026-09-14: 102 s cold)
     timeout 900 python3 /home/jun/dsv41-vllm/ops/prewarm.py "$API/v1" "$MODEL" >>"$LOG" 2>&1 \

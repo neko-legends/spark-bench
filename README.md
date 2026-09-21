@@ -208,6 +208,32 @@ bind-mounted patches, launcher env, fabric + clock-lock requirements, and
    k=3 read `[34.4, 55.0, 51.9, 31.6, 33.6]` — same four prompt classes, one variable. Prose +3–4,
    code even, aggregate +16%. Compare medians to medians; 34.4 (prose median) vs 57 (a code run)
    is not a regression, it's a different prompt.
+10. **XGrammar structural tags for DeepSeek tool calls — ON (`SGLANG_TOOL_STRICT_LEVEL=1`), measured.**
+   The `dev-dsv41` image already ships the V4.1 structural tag (`deepseekv41_detector.get_structural_tag`,
+   xgrammar 0.2.1) but it is OFF by default: it only engages on `tool_choice=required`, `tool.strict=true`,
+   or `SGLANG_TOOL_STRICT_LEVEL>=1`. With the env unset every agent tool call is generated unconstrained
+   and parsed after the fact. Level 1 (FUNCTION) constrains the DSML payload after the trigger token;
+   level 2 (PARAMETER) also forces strict JSON schemas — start with 1. The kit's env allowlist has to
+   forward it (`start.sh`, head + worker). Measured 2026-09-21, uncensored world, k=3, stream protocol,
+   `scripts/toolbench.py` (tools attached, temp 0):
+
+   | | strict OFF | strict 1 |
+   |---|---|---|
+   | tool-call decode, single | 60.0 tok/s | 51.3 (−15%) |
+   | prose with tools attached | 36.1 | 33.2 (−8%, per-step mask cost even on free text) |
+   | no tools (dsbench) | 32.8–34.4 / 67.8–68.6 agg | 33.4 / 66.9 (unchanged) |
+   | 4 tool requests, wall | 4.7 s / 437 tok | **3.6 s** / 272 tok (tighter outputs, no preamble) |
+   | schema-valid tool calls | 16/16 | 16/16 |
+   | gates G0/G1/G2 | pass | pass (clean / 30/30 / 3/3) |
+   | grammar compile, first use of a toolset | — | 3 tools 0.1 s · 40 tools 1.5 s · 60 nested 6 s, cached after; **~50 s** first-ever compile after boot (JIT) |
+
+   Verdict: kept. The per-token premium is real (8–15% on tool-bearing traffic, which for pi lanes is
+   all traffic) but small in absolute terms, wall time on tool-heavy batches got *faster* because the
+   constrained outputs drop the prose preamble, and malformed DSML becomes structurally impossible
+   rather than trained-away — insurance for exactly the stressed-context conditions the gates don't
+   cover. The one operational trap is the cold JIT: `recover-sglang.sh` now fires a throwaway
+   tool-bearing warmup before declaring RECOVERED so the first agent message never eats the 50 s.
+
 9. **The DSpark SPS cost table does not work with Engram (yet).** Profiling it takes a dedicated
    boot (`SGLANG_DSPARK_ENABLE_SPS_RECORD=1 SGLANG_SIMULATE_ACC_LEN=1.0 SGLANG_RAGGED_VERIFY_MODE=static`,
    `SKIP_SMOKE=1` because simulated acceptance breaks the smoke's exact-answer check), and the
