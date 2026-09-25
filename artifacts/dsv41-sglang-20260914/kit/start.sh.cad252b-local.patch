@@ -1,0 +1,194 @@
+diff --cc start.sh
+index 9d0d231,58eb2e6..0000000
+--- a/start.sh
++++ b/start.sh
+@@@ -442,131 -356,61 +446,134 @@@ push_spec_tables() 
+  
+  worker_env_lines() {
+    local wip="$1" wgid="$2" rank="$3"
+ -  cat <<EOF
+ -        -e NODE_RANK=$rank -e NNODES=$NNODES \\
+ -        -e TP_SIZE=$TP_SIZE -e EP_SIZE=$EP_SIZE \\
+ -        -e DIST_INIT_ADDR=$HEAD_IP:$DIST_PORT \\
+ -        -e OFFLOAD_MODE=$OFFLOAD_MODE -e DSV41_CACHE_GIB=$DSV41_CACHE_GIB \\
+ -        -e DSV41_IO_THREADS=$DSV41_IO_THREADS \\
+ -        -e DSV41_RESIDENT_SCALES=$DSV41_RESIDENT_SCALES \\
+ -        -e DSV41_CACHE_WAYS=$DSV41_CACHE_WAYS \\
+ -        -e DSV41_STATS_SECONDS=$DSV41_STATS_SECONDS \\
+ -        -v $WORKER_ENGRAM_DIR:/engram \\
+ -        -e DSV41_PACKED_DIR=$DSV41_PACKED_DIR \\
+ -        -e DSPARK_SPS_TABLE=$DSPARK_SPS_TABLE \\
+ -        -e DSPARK_STS_TABLE=$DSPARK_STS_TABLE \\
+ -        -e DSV41_SOURCE=/models/DeepSeek-V4.1-Flash \\
+ -        -e MODEL_PATH=/models/DeepSeek-V4.1-Flash -e STATE_PATH=/state \\
+ -        -e SERVER_PORT=$PORT -e HOST=0.0.0.0 \\
+ -        -e CONTEXT_LENGTH=$CONTEXT_LENGTH \\
+ -        -e MEM_FRACTION_STATIC=$MEM_FRACTION_STATIC \\
+ -        -e MAX_RUNNING_REQUESTS=$MAX_RUNNING_REQUESTS \\
+ -        -e CHUNKED_PREFILL_SIZE=$CHUNKED_PREFILL_SIZE \\
+ -        -e MAX_TOTAL_TOKENS=$MAX_TOTAL_TOKENS \\
+ -        -e CUDA_GRAPH_MAX_BS_DECODE=$MAX_RUNNING_REQUESTS \\
+ -        -e SPEC_ALGO=$SPEC_ALGO -e DSPARK_BLOCK_SIZE=$DSPARK_BLOCK_SIZE \\
+ -        -e SERVED_MODEL_NAME=$SERVED_MODEL_NAME \\
+ -        -e SKIP_PREPARE=1 -e SKIP_VERIFY=1 -e SKIP_SMOKE=1 \\
+ -        -e NCCL_NET=$NCCL_NET -e NCCL_IB_DISABLE=$NCCL_IB_DISABLE \\
+ -        -e NCCL_IB_HCA=$IB_HCA -e NCCL_SOCKET_IFNAME=$NCCL_SOCKET_IFNAME \\
+ -        -e GLOO_SOCKET_IFNAME=$GLOO_SOCKET_IFNAME \\
+ -        -e NCCL_P2P_DISABLE=$NCCL_P2P_DISABLE -e NCCL_SHM_DISABLE=$NCCL_SHM_DISABLE \\
+ -        -e NCCL_CROSS_NIC=${NCCL_CROSS_NIC:-1} \\
+ -        -e NCCL_IB_MERGE_NICS=${NCCL_IB_MERGE_NICS:-0} \\
+ -        -e NCCL_IB_SUBNET_AWARE_ROUTING=${NCCL_IB_SUBNET_AWARE_ROUTING:-1} \\
+ -        -e NCCL_CUMEM_ENABLE=0 -e NCCL_DEBUG=$NCCL_DEBUG \\
+ -        -e NCCL_BUFFSIZE=${NCCL_BUFFSIZE:-4194304} -e NCCL_LL128_BUFFSIZE=${NCCL_LL128_BUFFSIZE:--2} \\
+ -        -e NCCL_PROTO=${NCCL_PROTO:-LL,LL128,Simple} -e NCCL_MAX_NCHANNELS=${NCCL_MAX_NCHANNELS:-32} \\
+ -        -e NCCL_DEBUG_SUBSYS=${NCCL_DEBUG_SUBSYS:-INIT} \\
+ -        -e DSV41_MXFP8_BACKEND=${DSV41_MXFP8_BACKEND:-b12x} \\
+ -        -e SGLANG_FLASHINFER_MOE_FUSED_FINALIZE=${SGLANG_FLASHINFER_MOE_FUSED_FINALIZE:-1} \\
+ -        -e SGLANG_DSPARK_ENABLE_SPS_RECORD=${SGLANG_DSPARK_ENABLE_SPS_RECORD:-0} \\
+ -        -e SGLANG_TOOL_STRICT_LEVEL=${SGLANG_TOOL_STRICT_LEVEL:-0} \\
+ -        ${SGLANG_SIMULATE_ACC_LEN:+-e SGLANG_SIMULATE_ACC_LEN=$SGLANG_SIMULATE_ACC_LEN} \\
+ -        ${SGLANG_RAGGED_VERIFY_MODE:+-e SGLANG_RAGGED_VERIFY_MODE=$SGLANG_RAGGED_VERIFY_MODE} \\
+ -        -e SGLANG_DSV41_REASONING_EFFORT=${SGLANG_DSV41_REASONING_EFFORT:-75} \\
+ -        -e DSV41_MAX_NEW_TOKENS=${DSV41_MAX_NEW_TOKENS:-32768} \\
+ -        -e DSV41_LOOP_ABORT=${DSV41_LOOP_ABORT:-1} \\
+ -        -e DSV41_LOOP_NGRAM=${DSV41_LOOP_NGRAM:-32} \\
+ -        -e DSV41_LOOP_REPEATS=${DSV41_LOOP_REPEATS:-4} \\
+ -        -e DSV41_LOOP_LINE_REPEATS=${DSV41_LOOP_LINE_REPEATS:-8} \\
+ -        -e PYTORCH_CUDA_ALLOC_CONF=${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:False} \\
+ -        -e NCCL_IB_GID_INDEX=$wgid \\
+ -        -e CUDA_DEVICE_ORDER=PCI_BUS_ID \\
+ -        -e SGLANG_ENABLE_DSV41_ENGRAM_HOST_TABLE=0 \\
+ -        -e DSV41_TP_PAD=${DSV41_TP_PAD:-1} \\
+ -        -e HOST_IP=$wip -e VLLM_HOST_IP=$wip \\
+ -EOF
+ +  local -a worker_args=(
+ +    -e "NODE_RANK=$rank"
+ +    -e "NNODES=$NNODES"
+ +    -e "TP_SIZE=$TP_SIZE"
+ +    -e "EP_SIZE=$EP_SIZE"
+ +    -e "DIST_INIT_ADDR=$HEAD_IP:$DIST_PORT"
+ +    -e "OFFLOAD_MODE=$OFFLOAD_MODE"
+ +    -e "DSV41_CACHE_GIB=$DSV41_CACHE_GIB"
+ +    -e "DSV41_IO_THREADS=$DSV41_IO_THREADS"
+ +    -e "DSV41_SERIAL_WEIGHT_LOAD=${DSV41_SERIAL_WEIGHT_LOAD:-0}"
+ +    -e "DSV41_RESIDENT_SCALES=$DSV41_RESIDENT_SCALES"
+ +    -e "DSV41_CACHE_WAYS=$DSV41_CACHE_WAYS"
+ +    -e "DSV41_STATS_SECONDS=$DSV41_STATS_SECONDS"
+ +    -v "$WORKER_ENGRAM_DIR:/engram"
+ +    -e "DSV41_PACKED_DIR=$DSV41_PACKED_DIR"
+ +    -e "DSPARK_SPS_TABLE=$DSPARK_SPS_TABLE"
+ +    -e "DSPARK_STS_TABLE=$DSPARK_STS_TABLE"
+++    -e "SGLANG_TOOL_STRICT_LEVEL=${SGLANG_TOOL_STRICT_LEVEL:-0}"
+++    ${SGLANG_SIMULATE_ACC_LEN:+-e SGLANG_SIMULATE_ACC_LEN=$SGLANG_SIMULATE_ACC_LEN}
+++    ${SGLANG_RAGGED_VERIFY_MODE:+-e SGLANG_RAGGED_VERIFY_MODE=$SGLANG_RAGGED_VERIFY_MODE}
+ +    -e "DSV41_SOURCE=/models/DeepSeek-V4.1-Flash"
+ +    -e "MODEL_PATH=/models/DeepSeek-V4.1-Flash"
+ +    -e "STATE_PATH=/state"
+ +    -e "SERVER_PORT=$PORT"
+ +    -e "HOST=0.0.0.0"
+ +    -e "CONTEXT_LENGTH=$CONTEXT_LENGTH"
+ +    -e "MEM_FRACTION_STATIC=$MEM_FRACTION_STATIC"
+ +    -e "MAX_RUNNING_REQUESTS=$MAX_RUNNING_REQUESTS"
+ +    -e "CHUNKED_PREFILL_SIZE=$CHUNKED_PREFILL_SIZE"
+ +    -e "MAX_TOTAL_TOKENS=$MAX_TOTAL_TOKENS"
+ +    -e "CUDA_GRAPH_MAX_BS_DECODE=$MAX_RUNNING_REQUESTS"
+ +    -e "SPEC_ALGO=$SPEC_ALGO"
+ +    -e "DSPARK_BLOCK_SIZE=$DSPARK_BLOCK_SIZE"
+ +    -e "DSV41_WO_A_W8=$DSV41_WO_A_W8"
+ +    -e "DSV41_WO_A_W8_MID=$DSV41_WO_A_W8_MID"
+ +    -e "DSV41_WO_A_W8_DROP=$DSV41_WO_A_W8_DROP"
+ +    -e "DSV41_DRAFT_HEAD_FP8=$DSV41_DRAFT_HEAD_FP8"
+ +    -e "DSV41_VERIFY_CAP=$DSV41_VERIFY_CAP"
+ +    -e "DSV41_DRAFT_TAU=$DSV41_DRAFT_TAU"
+ +    -e "DSV41_BLOCK_VERIFY=$DSV41_BLOCK_VERIFY"
+ +    -e "DSV41_ENGRAM_PREFETCH=$DSV41_ENGRAM_PREFETCH"
+ +    -e "DSV41_FOLDED_FENCE=$DSV41_FOLDED_FENCE"
+ +    -e "DSV41_AUTOTUNE_KEEP=${DSV41_AUTOTUNE_KEEP:-0}"
+ +    -e "DSV41_WO_A_W8_DRAFT=${DSV41_WO_A_W8_DRAFT:-0}"
+ +    -e "DSV41_ENGRAM_PREFETCH_CHECK=${DSV41_ENGRAM_PREFETCH_CHECK:-0}"
+ +    -e "SERVED_MODEL_NAME=$SERVED_MODEL_NAME"
+ +    -e "SKIP_PREPARE=1"
+ +    -e "SKIP_VERIFY=1"
+ +    -e "SKIP_SMOKE=1"
+ +    -e "NCCL_NET=$NCCL_NET"
+ +    -e "NCCL_IB_DISABLE=$NCCL_IB_DISABLE"
+ +    -e "NCCL_IB_HCA=$IB_HCA"
+ +    -e "NCCL_SOCKET_IFNAME=$NCCL_SOCKET_IFNAME"
+ +    -e "GLOO_SOCKET_IFNAME=$GLOO_SOCKET_IFNAME"
+ +    -e "NCCL_P2P_DISABLE=$NCCL_P2P_DISABLE"
+ +    -e "NCCL_SHM_DISABLE=$NCCL_SHM_DISABLE"
+ +    -e "NCCL_CROSS_NIC=${NCCL_CROSS_NIC:-1}"
+ +    -e "NCCL_IB_MERGE_NICS=${NCCL_IB_MERGE_NICS:-0}"
+ +    -e "NCCL_IB_SUBNET_AWARE_ROUTING=${NCCL_IB_SUBNET_AWARE_ROUTING:-1}"
+ +    -e "NCCL_CUMEM_ENABLE=0"
+ +    -e "NCCL_DEBUG=$NCCL_DEBUG"
+ +    -e "NCCL_BUFFSIZE=${NCCL_BUFFSIZE:-4194304}"
+ +    -e "NCCL_LL128_BUFFSIZE=${NCCL_LL128_BUFFSIZE:--2}"
+ +    -e "NCCL_PROTO=${NCCL_PROTO:-LL,LL128,Simple}"
+ +    -e "NCCL_MAX_NCHANNELS=${NCCL_MAX_NCHANNELS:-32}"
+ +    -e "NCCL_DEBUG_SUBSYS=${NCCL_DEBUG_SUBSYS:-INIT}"
+ +    -e "DSV41_MXFP8_BACKEND=${DSV41_MXFP8_BACKEND:-b12x}"
+ +    -e "SGLANG_FLASHINFER_MOE_FUSED_FINALIZE=${SGLANG_FLASHINFER_MOE_FUSED_FINALIZE:-1}"
+ +    -e "SGLANG_DSV41_REASONING_EFFORT=${SGLANG_DSV41_REASONING_EFFORT:-75}"
+ +    -e "DSV41_MAX_NEW_TOKENS=${DSV41_MAX_NEW_TOKENS:-32768}"
+ +    -e "DSV41_LOOP_ABORT=${DSV41_LOOP_ABORT:-1}"
+ +    -e "DSV41_LOOP_NGRAM=${DSV41_LOOP_NGRAM:-32}"
+ +    -e "DSV41_LOOP_REPEATS=${DSV41_LOOP_REPEATS:-4}"
+ +    -e "DSV41_LOOP_LINE_REPEATS=${DSV41_LOOP_LINE_REPEATS:-8}"
+ +    -e "PYTORCH_CUDA_ALLOC_CONF=${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:False}"
+ +    -e "NCCL_IB_GID_INDEX=$wgid"
+ +    -e "CUDA_DEVICE_ORDER=PCI_BUS_ID"
+ +    -e "SGLANG_ENABLE_DSV41_ENGRAM_HOST_TABLE=0"
+ +    -e "DSV41_TP_PAD=${DSV41_TP_PAD:-1}"
+ +    -e "HOST_IP=$wip"
+ +    -e "VLLM_HOST_IP=$wip"
+ +  )
+ +  if [[ -n "${SGLANG_DSPARK_FOLDED_SAMPLING:-}" ]]; then
+ +    worker_args+=(-e "SGLANG_DSPARK_FOLDED_SAMPLING=$SGLANG_DSPARK_FOLDED_SAMPLING")
+ +  fi
+ +  switchless_ring_args worker_args
+ +  if [[ "${DSV41_LAUNCHER:-}" == tp4 ]]; then
+ +    worker_args+=(
+ +      -e "DSV41_LAUNCHER=tp4"
+ +      -e "DSV41_SHARED_PAD_K=${DSV41_SHARED_PAD_K:-0}"
+ +      -e "DSV41_SHARED_PAD_BUF_ROWS=${DSV41_SHARED_PAD_BUF_ROWS:-256}"
+ +    )
+ +    extra_container_env_args worker_args
+ +  fi
+ +  printf '        %q ' "${worker_args[@]}"
+ +  printf '\\\n'
+ +}
+ +
+ +# Validate every rank; never stop at the first missing worker image.
+ +# These probes run disposable containers without network or GPU access.
+ +preflight_all_nodes() {
+ +  nccl_validate_config || return 1
+ +  [[ "$NCCL_OVERLAY_PIP" == 1 || "$NCCL_SWITCHLESS_RING_ONLY" == 1 ]] || return 0
+ +  local h gid failed=0
+ +  RING_WORKER_GIDS=()
+ +  if RING_GID_HEAD=$(nccl_preflight); then
+ +    info "NCCL preflight head OK${RING_GID_HEAD:+ (ACTIVE HCAs: $IB_HCA, RoCEv2 GID: $RING_GID_HEAD)}"
+ +  else
+ +    warn 'NCCL preflight failed on head'; failed=1
+ +  fi
+ +  for h in "${WORKER_HOSTS[@]}"; do
+ +    if gid=$(remote_on "$h" "set -e
+ +$(nccl_worker_settings)
+ +nccl_preflight"); then
+ +      gid="${gid//$'\r'/}"
+ +      gid="${gid#"${gid%%[![:space:]]*}"}"
+ +      gid="${gid%"${gid##*[![:space:]]}"}"
+ +      if [[ "$NCCL_SWITCHLESS_RING_ONLY" == 1 && ! "$gid" =~ ^[0-9]+$ ]]; then
+ +        warn "NCCL preflight $h returned an invalid GID index"; failed=1
+ +        continue
+ +      fi
+ +      RING_WORKER_GIDS+=("$gid")
+ +      info "NCCL preflight $h OK${gid:+ (ACTIVE HCAs: $IB_HCA, RoCEv2 GID: $gid)}"
+ +    else
+ +      warn "NCCL preflight failed on $h"; failed=1
+ +    fi
+ +  done
+ +  return "$failed"
+  }
+  
+  cmd_doctor() {
