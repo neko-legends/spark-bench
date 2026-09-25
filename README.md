@@ -2,6 +2,8 @@
 
 > ### 4 DGX Sparks. One shared TP4 world. Now serving: DeepSeek V4.1 Flash, **uncensored**, on SGLang.
 > **What's live (2026-09-16):** the abliterated checkpoint
+
+**2026-09-25 — Mia kit `cad252b` production-line update adopted (weights unchanged: abliterated checkpoint, k=3).** Pinned base image by digest; fast loader — weight load 285s → 73s+8s, full boot ~10min → **3.5min**; indexer-chunked prefill unlocks CHUNKED_PREFILL_SIZE 4096. Measured: cold prefill **3664 tok/s @32k** (was ~2200) and **2638 tok/s @400k, TTFT 151s** (was 1534 tok/s / 259s — +72%); decode unchanged (35.1 single / 68.6 agg@4). Adapters adopted: fast_load, engram_prefetch, wo_a_w8(+mid/drop), draft_head_fp8(tp4), block_verify, folded_fence, autotune_keep, replicated_split, draft_main_proj_split, shared_pad_k, sleep-on-idle, MoE fused finalize OFF (determinism). Not adopted (canary-roce images only): RoCEnante, prefill-SP, EP1+routed-MoE, draft_tau. Two k=5-only adapters dropped after real boot failures: router_live (engine source drift), verify_cap (confidence tensor expects k=5 layout — our k=3). All gates green post-swap: G0, G1 30/30, G2 3/3, G3, G4 needle 32k+400k; abliteration probe intact. Kit artifacts: `artifacts/dsv41-sglang-20260914/kit/start.sh.cad252b-local.patch` (our env-forwarding re-patch), `kit/env.tp4.cad252b.redacted`.
 > [`dealignai/DeepSeek-V4.1-Flash-UNCENSORED-FP8`](https://huggingface.co/dealignai/DeepSeek-V4.1-Flash-UNCENSORED-FP8)
 > under [Mia's SGLang kit](https://github.com/MiaAI-Lab/DeepSeek-v4.1-Flash-DGX-Sparks) — **1M context, needle-verified**,
 > DSpark **k=3** (+14% over k=5, stream-measured), ~33–43 tok/s single stream depending on workload, prefill ~1.5× our vLLM champion, tools + thinking on,
