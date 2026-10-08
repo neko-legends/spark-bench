@@ -12,7 +12,7 @@ our fork, **[neko-legends/deepseek-v41-tensorfold-spark](https://github.com/neko
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../../../docs/images/lane-dsv41-tensorfold-dark.svg">
-  <img alt="DeepSeek V4.1 Flash on TensorFold, four Sparks: writing speed prose 66 vs 38 tok/s for SGLang, code 104 vs 57, four users 122 vs 76; cold 160k-token prompt 97-100 s on 2026-10-04, 39 s pipelined on 2026-10-05, 36 s on the G19 engine, SGLang 48-52 s" src="../../../docs/images/lane-dsv41-tensorfold-light.svg">
+  <img alt="DeepSeek V4.1 Flash on TensorFold, four Sparks: writing speed over 1k-160k prompts prose 66 vs 38 tok/s for SGLang, code 104 vs 57; code on a short prompt 123; four users 122 vs 76, and 200 steady; cold 160k-token prompt 97-100 s on 2026-10-04, 39 s pipelined on 2026-10-05, 36 s on the G19 engine, SGLang 48-52 s" src="../../../docs/images/lane-dsv41-tensorfold-light.svg">
 </picture>
 
 ## Results (2026-10-07, live: G19 on RoCE)

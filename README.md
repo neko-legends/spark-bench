@@ -62,7 +62,7 @@ That history is the point. When a new model comes out, the next engineer (or the
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/lane-dsv41-tensorfold-dark.svg">
-  <img alt="DeepSeek V4.1 Flash on TensorFold, four Sparks: writing speed prose 66 vs 38 tok/s for SGLang, code 104 vs 57, four users 122 vs 76; cold 160k-token prompt 97-100 s on 2026-10-04, 39 s pipelined on 2026-10-05, 36 s on the G19 engine live since 2026-10-07, SGLang 48-52 s" src="docs/images/lane-dsv41-tensorfold-light.svg">
+  <img alt="DeepSeek V4.1 Flash on TensorFold, four Sparks: writing speed over 1k-160k prompts prose 66 vs 38 tok/s for SGLang, code 104 vs 57; code on a short prompt 123; four users 122 vs 76, and 200 steady; cold 160k-token prompt 97-100 s on 2026-10-04, 39 s pipelined on 2026-10-05, 36 s on the G19 engine live since 2026-10-07, SGLang 48-52 s" src="docs/images/lane-dsv41-tensorfold-light.svg">
 </picture>
 
 - ⚡ **1.7× SGLang's decode** at every prompt length from 1k to 160k: jayleaton's engine, ported by us to four Sparks.
