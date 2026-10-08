@@ -27,6 +27,8 @@ The same depth sweep as 2026-10-04 (median of 3 a cell, 512 tokens, greedy, isol
 
 Four users at once (`dsbench`): **122.2 tok/s** aggregate (was 119.2).
 
+On `m2bench` (one short prompt, 384 tokens, exact), the live build (q4 draft head, rotated expert split) runs **code 122-124 / prose 68-69 tok/s** for one user, and **four users ~200 tok/s steady** (138-139 aggregate including ramp), against ~80 code for Jay's two-Spark build on the same benchmark.
+
 **From 2026-10-05 17:32 to 2026-10-07, the server ran on NCCL instead of RoCE without saying so.** A crash test left
 RoCE's failure file `/cache/roce-failed` in forge's cache volume. While that file exists, every start uses NCCL.
 Moving it aside gave +12% code and +19% prose on `m2bench`. The G13 vs G19 table [below](#live-2026-10-07-jays-g19-engine)

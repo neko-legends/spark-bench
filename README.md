@@ -17,7 +17,7 @@ One cluster, one model at a time. Click a lane for its recipe.
 
 | | Lane | Status | Best numbers |
 | :-: | --- | --- | --- |
-| 🐋 | **[DeepSeek V4.1 Flash · TensorFold](models/deepseek-v4.1-flash/tensorfold-4x/README.md)** | 🟢 **serving** | **67** prose / **104** code tok/s · cold 160k prompt **36 s** · 420K context |
+| 🐋 | **[DeepSeek V4.1 Flash · TensorFold](models/deepseek-v4.1-flash/tensorfold-4x/README.md)** | 🟢 **serving** | **123** code tok/s on a short prompt (**104** averaged 1k–160k) · **67** prose · **200** for 4 users · cold 160k prompt **36 s** |
 | 🐋 | [DeepSeek V4.1 Flash · SGLang](models/deepseek-v4.1-flash/README.md) | 🟡 rollback | 38 prose / 54–62 code tok/s · 1M context |
 | 🐋 | [DeepSeek V4.1 Flash · vLLM](docs/dsv41-vllm-tp4.md) | 🟡 fallback | 71 code tok/s · 109 tok/s for 4 users |
 | 🦄 | [Qwen 3.8 Flash Next](models/qwen-3.8-flash-next/README.md) | ⚪ archived | 91 code tok/s · 600 tok/s for 16 users |
@@ -69,6 +69,7 @@ That history is the point. When a new model comes out, the next engineer (or the
 - 🏭 **Long prompts run as a pipeline** across the Sparks: a cold 160k-token prompt takes 36 s (was 100 s).
 - 🛠️ **The bugs from Jay's review are fixed** (crash at `top_k` above 32,256): same replies byte for byte, same speed.
 - 🆕 **Jay's newer engine (G19), live since 2026-10-07:** 420K context and image input; long prompts ~7% faster. [Report](artifacts/tensorfold-v41-g19-20261005/REPORT.md).
+- 🚀 **One user, short code prompt: 123 tok/s; four users: 200 tok/s steady** (2026-10-07, `m2bench`). Two Sparks run the same benchmark at ~80. Long prompts average 104 (code) / 67 (prose) over 1k–160k.
 - 🔌 **Back on RoCE (2026-10-07):** a stale failure file had silently forced the slower NCCL path for two days. Fixed: prose 66.5, code 104.1 tok/s, 4 users 122. [Report](artifacts/tensorfold-v41-roce-20261007/REPORT.md).
 
 📦 [Recipe: our four-Spark fork](https://github.com/neko-legends/deepseek-v41-tensorfold-spark) · 📘 [Setup & limits](models/deepseek-v4.1-flash/tensorfold-4x/README.md) · 📓 [Journal](models/deepseek-v4.1-flash/JOURNAL.md) · 🧾 Reports: [decode](artifacts/tensorfold-v41-roce-20261007/REPORT.md), [prompt reading](artifacts/tensorfold-v41-prefill-20261005/REPORT.md), [fixes](artifacts/tensorfold-v41-fixes-20261005/REPORT.md)
