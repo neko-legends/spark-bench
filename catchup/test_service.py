@@ -230,5 +230,52 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(status["reason"], "boot")
 
 
+class AutoEngineTests(unittest.TestCase):
+    """CATCHUP_VLLM_URL=auto warms whatever serves the Sparks (sparks_engine), its served model."""
+
+    def test_auto_resolves_engine_per_warm(self):
+        from types import SimpleNamespace
+        from unittest import mock
+        import catchup.service as service_mod
+
+        seen = []
+
+        class Engine(BaseHTTPRequestHandler):
+            def do_POST(self):
+                seen.append((self.path, json.loads(self.rfile.read(int(self.headers["content-length"])))))
+                body = json.dumps({"usage": {"prompt_tokens": 3}}).encode()
+                self.send_response(200)
+                self.send_header("content-length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *args):
+                pass
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Engine)
+        Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        engine = SimpleNamespace(base_url=f"http://127.0.0.1:{server.server_address[1]}/v1", model="Whatever-Is-Served")
+        service = CatchupService(vllm_url="auto")
+        with mock.patch.object(service_mod, "sparks_engine", return_value=engine):
+            out = service._http_warmup({"model": "", "messages": [{"role": "user", "content": "hi"}]})
+            service._http_warmup({"model": "explicit", "messages": [{"role": "user", "content": "hi"}]})
+        self.assertEqual(out["usage"]["prompt_tokens"], 3)
+        self.assertEqual([path for path, _ in seen], ["/v1/chat/completions"] * 2)
+        self.assertEqual([body["model"] for _, body in seen], ["Whatever-Is-Served", "explicit"])
+
+    def test_auto_caps_context_at_the_engine(self):
+        from types import SimpleNamespace
+        from unittest import mock
+        import catchup.service as service_mod
+        service = CatchupService(vllm_url="auto", max_context=430000)
+        with mock.patch.object(service_mod, "sparks_engine", return_value=SimpleNamespace(context_length=307200)):
+            self.assertEqual(service._engine_context(), 307200)
+        with mock.patch.object(service_mod, "sparks_engine", side_effect=RuntimeError("down")):
+            self.assertEqual(service._engine_context(), 430000)
+        self.assertEqual(CatchupService(vllm_url="http://x/v1", max_context=5)._engine_context(), 5)
+
+
 if __name__ == "__main__":
     unittest.main()

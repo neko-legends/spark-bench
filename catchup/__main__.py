@@ -57,7 +57,8 @@ def build_handler(service: CatchupService) -> type[BaseHTTPRequestHandler]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="KV prefill catch-up sidecar")
     parser.add_argument("--listen", default=os.environ.get("CATCHUP_LISTEN", "127.0.0.1:18900"))
-    parser.add_argument("--vllm", default=os.environ.get("CATCHUP_VLLM_URL", "http://127.0.0.1:18888/v1"))
+    # "auto" (default): whatever serves the Sparks now, resolved per warm (nest sparks_engine).
+    parser.add_argument("--vllm", default=os.environ.get("CATCHUP_VLLM_URL", "auto"))
     parser.add_argument("--model", default=os.environ.get("CATCHUP_MODEL", ""))
     parser.add_argument("--max-context", type=int, default=int(os.environ.get("CATCHUP_MAX_CONTEXT", "1000000")))
     parser.add_argument("--timeout", type=float, default=float(os.environ.get("CATCHUP_TIMEOUT_S", "1800")))

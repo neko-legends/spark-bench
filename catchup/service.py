@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import socket
+import sys
 import threading
 import time
 import uuid
@@ -196,6 +198,19 @@ REASON_RANK = {"turn": 0, "restore": 1, "compact": 2, "boot": 3, "touch": 4}
 BACKGROUND_SUFFIX = ":background"
 
 
+AUTO = "auto"
+
+
+def sparks_engine():
+    """The engine serving the Sparks now: nest scripts/lib/sparks_engine.py (2026-10-16:
+    any model, any port; 30 s cache there). SPARKS_ENGINE_LIB overrides the lib dir."""
+    lib = os.environ.get("SPARKS_ENGINE_LIB") or os.path.expanduser("~/nest/scripts/lib")
+    if lib not in sys.path:
+        sys.path.insert(0, lib)
+    import sparks_engine as engine_lib
+    return engine_lib.resolve()
+
+
 class CatchupService:
     def __init__(
         self,
@@ -339,7 +354,7 @@ class CatchupService:
 
     def submit(self, body: Mapping[str, Any]) -> dict[str, Any]:
         snapshot = normalize_snapshot(body)
-        limit = reserved_limit(snapshot["max_context"] or self.max_context)
+        limit = reserved_limit(min(snapshot["max_context"] or self.max_context, self._engine_context()))
         rolled = apply_rolling_window(snapshot["messages"], limit)
         digest = hash_snapshot(rolled, snapshot["tools"], snapshot["chat_template_kwargs"])
         estimate = estimate_prompt_tokens(rolled)
@@ -444,11 +459,24 @@ class CatchupService:
             session.state = "warm"
             session.error = None
 
+    def _engine_context(self) -> int:
+        """With vllm_url=auto, never roll past the context the Sparks engine reports."""
+        if self.vllm_url != AUTO:
+            return self.max_context
+        try:
+            return int(sparks_engine().context_length or self.max_context)
+        except Exception:  # noqa: BLE001 - no engine: the warm itself fails later
+            return self.max_context
+
     def _http_warmup(self, work: dict[str, Any]) -> Mapping[str, Any]:
         if not self.vllm_url:
             raise RuntimeError("CATCHUP_VLLM_URL is not set")
+        base, model = self.vllm_url, work["model"]
+        if base == AUTO:  # warm whatever serves the Sparks now; nothing ready -> this warm fails
+            engine = sparks_engine()
+            base, model = engine.base_url, (model if model and model != AUTO else engine.model)
         payload: dict[str, Any] = {
-            "model": work["model"],
+            "model": model,
             "messages": work["messages"],
             "max_tokens": 1,
             "temperature": 0,
@@ -458,7 +486,7 @@ class CatchupService:
             payload["tools"] = work["tools"]
         if work.get("chat_template_kwargs"):
             payload["chat_template_kwargs"] = work["chat_template_kwargs"]
-        target = urlsplit(f"{self.vllm_url}/chat/completions")
+        target = urlsplit(f"{base}/chat/completions")
         conn_cls = HTTPSConnection if target.scheme == "https" else HTTPConnection
         # Short connect timeout: shutdown() cannot interrupt a connect() in
         # progress, so a dead engine must not pin an aborted warm for timeout_s.
