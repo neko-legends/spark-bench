@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="634" viewBox="0 0 1120 634" font-family="Inter, DejaVu Sans, Helvetica, Arial, sans-serif">
+<rect width="1120" height="634" fill="#ffffff"/>
+<text x="24" y="34" font-size="22" font-weight="600" fill="#111">GLM-5.3-Flash FP4: vLLM vs TensorFold</text>
+<text x="24" y="58" font-size="13" fill="#666">Quality = % correct (higher is better). Speed = decode tok/s on fixed prompts (thinking off). Same frozen inputs for every model.</text>
+<rect x="24" y="56" width="12" height="12" fill="#2a78d6"/>
+<text x="42" y="67" font-size="13" fill="#333">vLLM b12x (TP-4)</text>
+<rect x="244" y="56" width="12" height="12" fill="#d65a2a"/>
+<text x="262" y="67" font-size="13" fill="#333">TensorFold Zig (TP-4)</text>
+<text x="238" y="95" font-size="13" text-anchor="end" fill="#222">Knowledge (MMLU-200)</text>
+<rect x="250" y="79" width="810.0" height="26" fill="#f2f4f7"/>
+<rect x="250" y="79.0" width="712.8" height="12.0" fill="#2a78d6" rx="2"/>
+<text x="968.8" y="89.0" font-size="11" fill="#333">88%</text>
+<rect x="250" y="92.0" width="712.8" height="12.0" fill="#d65a2a" rx="2"/>
+<text x="968.8" y="102.0" font-size="11" fill="#333">88%</text>
+<line x1="1060" y1="79" x2="1060" y2="105" stroke="#d0d5dd"/>
+<text x="238" y="128" font-size="13" text-anchor="end" fill="#222">Math (GSM8K-30)</text>
+<rect x="250" y="112" width="810.0" height="26" fill="#f2f4f7"/>
+<rect x="250" y="112.0" width="810.0" height="12.0" fill="#2a78d6" rx="2"/>
+<text x="1062.0" y="122.0" font-size="11" fill="#333">100%</text>
+<rect x="250" y="125.0" width="810.0" height="12.0" fill="#d65a2a" rx="2"/>
+<text x="1062.0" y="135.0" font-size="11" fill="#333">100%</text>
+<line x1="1060" y1="112" x2="1060" y2="138" stroke="#d0d5dd"/>
+<text x="238" y="161" font-size="13" text-anchor="end" fill="#222">Coding (5 hidden tests)</text>
+<rect x="250" y="145" width="810.0" height="26" fill="#f2f4f7"/>
+<rect x="250" y="145.0" width="648.0" height="12.0" fill="#2a78d6" rx="2"/>
+<text x="904.0" y="155.0" font-size="11" fill="#333">80%</text>
+<rect x="250" y="158.0" width="648.0" height="12.0" fill="#d65a2a" rx="2"/>
+<text x="904.0" y="168.0" font-size="11" fill="#333">80%</text>
+<line x1="1060" y1="145" x2="1060" y2="171" stroke="#d0d5dd"/>
+<text x="238" y="194" font-size="13" text-anchor="end" fill="#222">Instruction following</text>
+<rect x="250" y="178" width="810.0" height="26" fill="#f2f4f7"/>
+<rect x="250" y="178.0" width="729.0" height="12.0" fill="#2a78d6" rx="2"/>
+<text x="985.0" y="188.0" font-size="11" fill="#333">90%</text>
+<rect x="250" y="191.0" width="769.5" height="12.0" fill="#d65a2a" rx="2"/>
+<text x="1025.5" y="201.0" font-size="11" fill="#333">95%</text>
+<line x1="1060" y1="178" x2="1060" y2="204" stroke="#d0d5dd"/>
+<text x="238" y="227" font-size="13" text-anchor="end" fill="#222">JSON schema</text>
+<rect x="250" y="211" width="810.0" height="26" fill="#f2f4f7"/>
+<rect x="250" y="211.0" width="810.0" height="12.0" fill="#2a78d6" rx="2"/>
+<text x="1062.0" y="221.0" font-size="11" fill="#333">100%</text>
+<rect x="250" y="224.0" width="810.0" height="12.0" fill="#d65a2a" rx="2"/>
+<text x="1062.0" y="234.0" font-size="11" fill="#333">100%</text>
+<line x1="1060" y1="211" x2="1060" y2="237" stroke="#d0d5dd"/>
+<text x="238" y="260" font-size="13" text-anchor="end" fill="#222">Tool use + chains</text>
+<rect x="250" y="244" width="810.0" height="26" fill="#f2f4f7"/>
+<rect x="250" y="244.0" width="810.0" height="12.0" fill="#2a78d6" rx="2"/>
+<text x="1062.0" y="254.0" font-size="11" fill="#333">100%</text>
+<rect x="250" y="257.0" width="810.0" height="12.0" fill="#d65a2a" rx="2"/>
+<text x="1062.0" y="267.0" font-size="11" fill="#333">100%</text>
+<line x1="1060" y1="244" x2="1060" y2="270" stroke="#d0d5dd"/>
+<text x="238" y="293" font-size="13" text-anchor="end" fill="#222">Long context (passkey)</text>
+<rect x="250" y="277" width="810.0" height="26" fill="#f2f4f7"/>
+<rect x="250" y="277.0" width="810.0" height="12.0" fill="#2a78d6" rx="2"/>
+<text x="1062.0" y="287.0" font-size="11" fill="#333">100%</text>
+<rect x="250" y="290.0" width="810.0" height="12.0" fill="#d65a2a" rx="2"/>
+<text x="1062.0" y="300.0" font-size="11" fill="#333">100%</text>
+<line x1="1060" y1="277" x2="1060" y2="303" stroke="#d0d5dd"/>
+<text x="238" y="326" font-size="13" text-anchor="end" fill="#222">Summary: facts kept</text>
+<rect x="250" y="310" width="810.0" height="26" fill="#f2f4f7"/>
+<rect x="250" y="310.0" width="810.0" height="12.0" fill="#2a78d6" rx="2"/>
+<text x="1062.0" y="320.0" font-size="11" fill="#333">100%</text>
+<rect x="250" y="323.0" width="810.0" height="12.0" fill="#d65a2a" rx="2"/>
+<text x="1062.0" y="333.0" font-size="11" fill="#333">100%</text>
+<line x1="1060" y1="310" x2="1060" y2="336" stroke="#d0d5dd"/>
+<text x="238" y="359" font-size="13" text-anchor="end" fill="#222">Summary: stale returned ↓</text>
+<rect x="250" y="343" width="810.0" height="26" fill="#f2f4f7"/>
+<rect x="250" y="343.0" width="0.0" height="12.0" fill="#2a78d6" rx="2"/>
+<text x="256.0" y="353.0" font-size="11" fill="#333">0%</text>
+<rect x="250" y="356.0" width="0.0" height="12.0" fill="#d65a2a" rx="2"/>
+<text x="256.0" y="366.0" font-size="11" fill="#333">0%</text>
+<line x1="1060" y1="343" x2="1060" y2="369" stroke="#d0d5dd"/>
+<text x="238" y="392" font-size="13" text-anchor="end" fill="#222">Summary: invented numbers ↓</text>
+<rect x="250" y="376" width="810.0" height="26" fill="#f2f4f7"/>
+<rect x="250" y="376.0" width="33.8" height="12.0" fill="#2a78d6" rx="2"/>
+<text x="289.8" y="386.0" font-size="11" fill="#333">4%</text>
+<rect x="250" y="389.0" width="0.0" height="12.0" fill="#d65a2a" rx="2"/>
+<text x="256.0" y="399.0" font-size="11" fill="#333">0%</text>
+<line x1="1060" y1="376" x2="1060" y2="402" stroke="#d0d5dd"/>
+<text x="24" y="414" font-size="13" font-weight="600" fill="#444">Speed — decode tok/s</text>
+<text x="238" y="439" font-size="13" text-anchor="end" fill="#222">code, 1 stream</text>
+<rect x="250" y="423" width="763.7" height="26" fill="#f2f4f7"/>
+<rect x="250" y="423.0" width="704.3" height="12.0" fill="#2a78d6" rx="2"/>
+<text x="960.3" y="433.0" font-size="11" fill="#333">82</text>
+<rect x="250" y="436.0" width="504.2" height="12.0" fill="#d65a2a" rx="2"/>
+<text x="760.2" y="446.0" font-size="11" fill="#333">59</text>
+<line x1="1060" y1="423" x2="1060" y2="449" stroke="#d0d5dd"/>
+<text x="238" y="472" font-size="13" text-anchor="end" fill="#222">prose, 1 stream</text>
+<rect x="250" y="456" width="763.7" height="26" fill="#f2f4f7"/>
+<rect x="250" y="456.0" width="313.6" height="12.0" fill="#2a78d6" rx="2"/>
+<text x="569.6" y="466.0" font-size="11" fill="#333">36</text>
+<rect x="250" y="469.0" width="315.8" height="12.0" fill="#d65a2a" rx="2"/>
+<text x="571.8" y="479.0" font-size="11" fill="#333">37</text>
+<line x1="1060" y1="456" x2="1060" y2="482" stroke="#d0d5dd"/>
+<text x="238" y="505" font-size="13" text-anchor="end" fill="#222">4 streams, aggregate</text>
+<rect x="250" y="489" width="763.7" height="26" fill="#f2f4f7"/>
+<rect x="250" y="489.0" width="697.5" height="12.0" fill="#2a78d6" rx="2"/>
+<text x="953.5" y="499.0" font-size="11" fill="#333">81</text>
+<rect x="250" y="502.0" width="528.9" height="12.0" fill="#d65a2a" rx="2"/>
+<text x="784.9" y="512.0" font-size="11" fill="#333">62</text>
+<line x1="1060" y1="489" x2="1060" y2="515" stroke="#d0d5dd"/>
+<text x="24" y="612" font-size="11" fill="#888">Generated by bench/chart.py from qbench result JSON. Percentages only; no pricing.</text>
+</svg>

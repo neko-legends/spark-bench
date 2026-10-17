@@ -1,0 +1,92 @@
+{
+ "label": "glm53-fp4-tf",
+ "url": "http://spark1:8190",
+ "model": "GLM-5.3-Flash-FP4",
+ "date": "2026-10-17T06:55:08-0700",
+ "rows": [
+  {
+   "target": 32768,
+   "rep": 0,
+   "prompt_tokens": 32846,
+   "cached_tokens": 0,
+   "wall_s": 18.386,
+   "server_ttft_s": 18.351813235,
+   "server_prefill_s": 18.26723695,
+   "prompt_tok_s_wall": 1786.5,
+   "prompt_tok_s_server": 1798.1,
+   "reply": "v",
+   "tensorfold": {
+    "enable_thinking": false,
+    "reasoning_effort": "none",
+    "engine": "lanes",
+    "tokens_per_second": 0.0,
+    "seconds": 0.000142127,
+    "prefill_seconds": 18.26723695,
+    "prefill_widths": [],
+    "prefill_raised": [],
+    "time_to_first_token": 18.351813235,
+    "sampling": "greedy",
+    "drafts": true,
+    "token_sha": "b4944c6ff08d",
+    "token_sha256": "b4944c6ff08dc6f43da2e9c824669b7d927dd1fa976fadc7b456881f51bf5ccc",
+    "min_rows": 0
+   }
+  },
+  {
+   "target": 131072,
+   "rep": 0,
+   "prompt_tokens": 131106,
+   "cached_tokens": 0,
+   "wall_s": 75.474,
+   "server_ttft_s": 75.437531815,
+   "server_prefill_s": 75.318061957,
+   "prompt_tok_s_wall": 1737.1,
+   "prompt_tok_s_server": 1740.7,
+   "reply": "s",
+   "tensorfold": {
+    "enable_thinking": false,
+    "reasoning_effort": "none",
+    "engine": "lanes",
+    "tokens_per_second": 0.0,
+    "seconds": 0.000463614,
+    "prefill_seconds": 75.318061957,
+    "prefill_widths": [],
+    "prefill_raised": [],
+    "time_to_first_token": 75.437531815,
+    "sampling": "greedy",
+    "drafts": true,
+    "token_sha": "a46e37632fa6",
+    "token_sha256": "a46e37632fa6ca51a13fe39a567b3c23b28c2f47d8af6be9bd63e030e214ba38",
+    "min_rows": 0
+   }
+  },
+  {
+   "target": 200000,
+   "rep": 0,
+   "prompt_tokens": 200025,
+   "cached_tokens": 0,
+   "wall_s": 120.345,
+   "server_ttft_s": 120.299713144,
+   "server_prefill_s": 120.139935328,
+   "prompt_tok_s_wall": 1662.1,
+   "prompt_tok_s_server": 1664.9,
+   "reply": "z",
+   "tensorfold": {
+    "enable_thinking": false,
+    "reasoning_effort": "none",
+    "engine": "lanes",
+    "tokens_per_second": 0.0,
+    "seconds": 0.000391183,
+    "prefill_seconds": 120.139935328,
+    "prefill_widths": [],
+    "prefill_raised": [],
+    "time_to_first_token": 120.299713144,
+    "sampling": "greedy",
+    "drafts": true,
+    "token_sha": "cd70bea023f7",
+    "token_sha256": "cd70bea023f752a0564abb6ed08d42c1440f2e33e29914e55e0be1595e24f45a",
+    "min_rows": 0
+   }
+  }
+ ]
+}
