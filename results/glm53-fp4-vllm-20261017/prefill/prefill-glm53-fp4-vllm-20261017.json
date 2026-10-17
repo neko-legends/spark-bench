@@ -1,0 +1,47 @@
+{
+ "label": "glm53-fp4-vllm",
+ "url": "http://spark1:18888",
+ "model": "GLM-5.3-Flash-FP4",
+ "date": "2026-10-17T02:45:51-0700",
+ "rows": [
+  {
+   "target": 32768,
+   "rep": 0,
+   "prompt_tokens": 32845,
+   "cached_tokens": null,
+   "wall_s": 12.289,
+   "server_ttft_s": null,
+   "server_prefill_s": null,
+   "prompt_tok_s_wall": 2672.7,
+   "prompt_tok_s_server": null,
+   "reply": "v",
+   "tensorfold": {}
+  },
+  {
+   "target": 131072,
+   "rep": 0,
+   "prompt_tokens": 131150,
+   "cached_tokens": null,
+   "wall_s": 50.78,
+   "server_ttft_s": null,
+   "server_prefill_s": null,
+   "prompt_tok_s_wall": 2582.7,
+   "prompt_tok_s_server": null,
+   "reply": "cob",
+   "tensorfold": {}
+  },
+  {
+   "target": 200000,
+   "rep": 0,
+   "prompt_tokens": 199964,
+   "cached_tokens": null,
+   "wall_s": 79.426,
+   "server_ttft_s": null,
+   "server_prefill_s": null,
+   "prompt_tok_s_wall": 2517.6,
+   "prompt_tok_s_server": null,
+   "reply": "v",
+   "tensorfold": {}
+  }
+ ]
+}
