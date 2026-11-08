@@ -117,6 +117,16 @@ clock **unlocked** (~2,400 MHz under load), image **`spark-ds41f:1107`**, weight
 One stream, 10 windows: TTFT p50 **117 ms**, TPOT p50 **12.3 ms**, **2.37 tokens/step** accepted. Context **524,288**,
 batch budget **16,384**, 16 sequences. Cold boot with a cold JIT cache ≈10 min; warm ≈2 min.
 
+### Against the engine we replaced
+
+The previous world on these same four machines was **TensorFold** — a bespoke Zig inference engine serving EXL3 2.9-bit packs. It is not an older version of this stack; it is a different species, and the trade went the other way on decode.
+
+<picture>
+  <img alt="TensorFold 1.1.2 versus spark-ds41f 1107: prefill 5,285 vs 8,540 tok/s at 32K, 5,749 vs 8,609 at 131K; decode 152 code and 67 prose one stream for TensorFold versus 81 for 1107, and 296 versus 239 aggregate at 8 streams" src="docs/images/engine-comparison-20261107.png">
+</picture>
+
+**Prefill roughly +50%, decode roughly half.** TensorFold did 151.8 tok/s on code one stream (67.3 prose) and 296 tok/s aggregate across eight slots; this stack does 8.6K prefill but ~81 tok/s on one stream. We took that trade deliberately — long prompts were the thing we were waiting on — and the honest statement is that both numbers are in the chart, not just the flattering one. The 8-stream 239 was measured on the 1030 build; we have not re-measured concurrency on 1107.
+
 ### What we did to get here, in the order that mattered
 
 1. **Removed our own GPU clock lock — +5 %.** A leftover `spark-gpu-clock-lock.service` ran `nvidia-smi -lgc 0,2200` on
