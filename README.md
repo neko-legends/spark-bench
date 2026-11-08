@@ -101,6 +101,10 @@ clock **unlocked** (~2,400 MHz under load), image **`spark-ds41f:1107`**, weight
 **`Infatoshi/DeepSeek-V4.1-Flash-1017-MXFP4-uncensored`** (`f07d8148`; same quant layout as official 1017 — `fp8` +
 `fp4` experts, 32×32 blocks, ue8m0).
 
+<picture>
+  <img alt="From 6,853 to 8,540 tok/s prefill: 4 KiB clock-locked baseline, uncensored MXFP4 weights, DGX OS 7.6.0, clock unlocked (2,177 to 2,405 MHz), release 1107 — with the upstream 1107 reference at 8,657" src="docs/images/prefill-journey-20261107.png">
+</picture>
+
 ### Numbers (2026-11-07, `servebench`, 2 repeats per size)
 
 | prompt | ours | release 1107 reference | delta |
