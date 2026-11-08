@@ -46,18 +46,23 @@ One cluster, one model at a time. Click a lane for its recipe.
 | | Lane | Status | Best numbers |
 | :-: | --- | --- | --- |
 | ⚡ | **[DeepSeek V4.1 Flash 1017 · spark-ds41f 1107 (vLLM + TileLang)](#dsv41-1107)** | 🟢 **live** since 2026-11-07 · [why](#now-serving) | **8,609 tok/s prefill @131K** (8,540 / 8,142 @32K / 262K) · **81 tok/s one stream** · TTFT 117 ms · 524,288 context · 16,384 batch budget · TP4 switched fabric |
-| 🐋 | [DeepSeek V4.1 Flash 1017 · our TensorFold 1.1.2 rebase (Zig engine)](#dsv41-1017-tf112) | ⚪ archived 2026-11-07 (was live 2026-10-22 → 2026-11-07) | **313 tok/s aggregate with 8 streams** · 212 with 4 · warm boot 166 s · 15/15 determinism hashes unchanged · same pack, **512K context** · single-stream code/prose not yet re-measured on this build |
-| 🐋 | [DeepSeek V4.1 Flash 1017 · TensorFold 1.1.0-era engine (Zig)](#dsv41-1017) | 🟡 previous (live 2026-10-17 → 2026-10-22) | 152 code tok/s (162 for 4) · 296 tok/s aggregate with 8 streams · 67 prose · cold 200K prompt 35.7 s · 512K context (passkey at 520K) · MMLU 89.5 % · 3D 98 + 108/180 |
-| 🐋 | [DeepSeek V4.1 Flash · TensorFold (Zig engine)](#dsv41-tensorfold) | 🟡 previous (live 2026-10-11 → 2026-10-15 and 2026-10-16 → 2026-10-17) | 129 code tok/s (218 for 4) · 66 prose (138 for 4) · cold 154K prompt 30 s |
-| 🐉 | [GLM-5.3-Flash FP4 · vLLM](#glm53-fp4-vllm) | 🔵 compared 2026-10-17, not serving | 82 code tok/s · 37 prose · MMLU 88.0 % · 3D 103 + 98/180 |
-| 🟩 | [Nemotron 3.5 Super VL · TensorFold (Zig engine)](#nemotron-tensorfold) | 🟡 previous (live 2026-10-15 → 2026-10-16) · [why not now](#now-serving-20261016) | 185 code tok/s · 95 prose · 16 conversations × 307K tokens · 214–230 tok/s for 16 |
-| 🐋 | [DeepSeek V4.1 Flash · SGLang](models/deepseek-v4.1-flash/README.md) | 🟡 rollback | 38 prose / 54–62 code tok/s · 1M context |
-| 🐋 | [DeepSeek V4.1 Flash · vLLM](docs/dsv41-vllm-tp4.md) | 🟡 fallback | 71 code tok/s · 109 tok/s for 4 users |
+| 🐋 | [DeepSeek V4.1 Flash 1017 · our TensorFold 1.1.2 rebase (Zig engine)](#dsv41-1017-tf112) | 🔁 **rollback** (last live 2026-10-22 → 2026-11-07) | **313 tok/s aggregate with 8 streams** · 212 with 4 · warm boot 166 s · 15/15 determinism hashes unchanged · same pack, **512K context** · single-stream code/prose not yet re-measured on this build |
+| 🐋 | [DeepSeek V4.1 Flash 1017 · TensorFold 1.1.0-era engine (Zig)](#dsv41-1017) | ⚪ archived 2026-11-07 (last live 2026-10-17 → 2026-10-22) | 152 code tok/s (162 for 4) · 296 tok/s aggregate with 8 streams · 67 prose · cold 200K prompt 35.7 s · 512K context (passkey at 520K) · MMLU 89.5 % · 3D 98 + 108/180 |
+| 🐋 | [DeepSeek V4.1 Flash · TensorFold (Zig engine)](#dsv41-tensorfold) | ⚪ archived 2026-11-07 (last live 2026-10-11 → 2026-10-17) | 129 code tok/s (218 for 4) · 66 prose (138 for 4) · cold 154K prompt 30 s |
+| 🐉 | [GLM-5.3-Flash FP4 · vLLM](#glm53-fp4-vllm) | ⚪ archived 2026-11-07 (compared 2026-10-17, never served) | 82 code tok/s · 37 prose · MMLU 88.0 % · 3D 103 + 98/180 |
+| 🟩 | [Nemotron 3.5 Super VL · TensorFold (Zig engine)](#nemotron-tensorfold) | ⚪ archived 2026-11-07 (last live 2026-10-15 → 2026-10-16) | 185 code tok/s · 95 prose · 16 conversations × 307K tokens · 214–230 tok/s for 16 |
+| 🐋 | [DeepSeek V4.1 Flash · SGLang](models/deepseek-v4.1-flash/README.md) | ⚪ archived 2026-11-07 (rollback until 2026-10-17) | 38 prose / 54–62 code tok/s · 1M context |
+| 🐋 | [DeepSeek V4.1 Flash · vLLM](docs/dsv41-vllm-tp4.md) | ⚪ archived 2026-11-07 (fallback until 2026-10-17) | 71 code tok/s · 109 tok/s for 4 users |
 | 🦄 | [Qwen 3.8 Flash Next](models/qwen-3.8-flash-next/README.md) | ⚪ archived | 91 code tok/s · 600 tok/s for 16 users |
 | 🐉 | [GLM 5.3 Flash](models/glm-5.3-flash/README.md) | ⚪ archived | 129 tok/s for 4 users · 1M context |
 | 🐳 | [DeepSeek V4 Flash](models/deepseek-v4-flash/README.md) | ⚪ archived | 136 tok/s, one user (record) · 182 for 4 |
 
 <sub>tok/s = writing speed. Rulers differ between lanes; each lane page says how its numbers were measured.</sub>
+
+**Status words are deliberate (2026-11-07).** 🟢 **live** is the one world answering requests now. 🔁 **rollback** is the
+one alternate world we can bring back on the same weights — currently our **TensorFold 1.1.2 rebase (Zig engine)**, last
+live 2026-10-22 → 2026-11-07. Everything else is ⚪ **archived**: the record and its numbers are kept, but nothing is
+served and it is not a rollback target. Lane pages below use the same three words, so the table and the headings agree.
 
 ## 🧠 Why this repo exists
 
@@ -201,7 +206,7 @@ Point `model` at your own weights in the profile (`config/cluster.local.json` �
   (uncensored weights) → 6,961 / 6,975 / 6,687 (OS 7.6.0, still locked) → 7,294 / 7,332 / 7,034 (clock unlocked) →
   **8,540 / 8,609 / 8,142** (release 1107).
 
-## 🐋 DeepSeek V4.1 Flash 1017 · TensorFold (Zig engine) · ⚪ archived 2026-11-07 (was live 2026-10-17 → 2026-11-07)
+## 🐋 DeepSeek V4.1 Flash 1017 · TensorFold (Zig engine) · ⚪ archived 2026-11-07 (last live 2026-10-17 → 2026-10-22)
 
 > Since 2026-10-22 this lane serves on our **TensorFold 1.1.2 rebase** — see [the 1.1.2 entry](#dsv41-1017-tf112) for its numbers. The figures in this section were measured on the earlier engine and are kept as the record.
 
@@ -350,6 +355,11 @@ compare across; compare this table only with itself.</sub>
 
 <a id="dsv41-1017-tf112"></a>
 
+> 🔁 **This is the rollback lane**, not an archive: the most recent world that served DeepSeek before spark-ds41f 1107.
+> Retiring it from the live slot on 2026-11-07 was an engine swap, not a judgement on this build — it still holds the
+> best decode this cluster has produced (313 tok/s aggregate at 8 slots). Numbers below are unchanged and kept as the
+> baseline a rollback would be measured against.
+
 #### 🔁 Engine: the 1.1.2 rebase on 4× Spark, and what 1.1.1 cost on the way (2026-10-22)
 
 > **The engine is part of the recipe, and ours is not the upstream release.** Every number below comes from our own
@@ -479,7 +489,7 @@ compared six zoomed regions of each build with the reference, in both presentati
 
 <a id="glm53-fp4-vllm"></a>
 
-## 🐉 GLM-5.3-Flash FP4 · vLLM · 🔵 compared 2026-10-17, not serving
+## 🐉 GLM-5.3-Flash FP4 · vLLM · ⚪ archived 2026-11-07 (compared 2026-10-17, never served)
 
 `nvidia/GLM-5.3-Flash-FP4-Local` on vLLM (the community b12x image the model card requires), TP=4 across the four Sparks,
 benched with the same harnesses on 2026-10-17. Two launch fixes were needed on our fabric (the RoCE GID index and a
@@ -552,7 +562,7 @@ it writes the scene itself or drives an editor to build it.
 
 <a id="nemotron-tensorfold"></a>
 
-## 🟩 Nemotron 3.5 Super VL · TensorFold (Zig engine) · 🟡 previous (live 2026-10-15 → 2026-10-16)
+## 🟩 Nemotron 3.5 Super VL · TensorFold (Zig engine) · ⚪ archived 2026-11-07 (last live 2026-10-15 → 2026-10-16)
 
 > 📌 **Not serving since 2026-10-16.** We went back to DeepSeek V4.1 Flash after a real-world agent test: building a
 > 3D garage from one reference image, a blinded referee scored DeepSeek 79/180 and Nemotron 44/180
@@ -639,7 +649,7 @@ long prompts): the shapes scene read 17/20 with it and 19/20 without.
 
 <a id="dsv41-tensorfold"></a>
 
-## 🐋 DeepSeek V4.1 Flash · TensorFold (Zig engine) · 🟡 previous (live 2026-10-11 → 2026-10-15 and 2026-10-16 → 2026-10-17)
+## 🐋 DeepSeek V4.1 Flash · TensorFold (Zig engine) · ⚪ archived 2026-11-07 (last live 2026-10-11 → 2026-10-17)
 
 > 📌 **Replaced by [DeepSeek V4.1 Flash 1017](#dsv41-1017) on 2026-10-17**, on the same engine and settings. This lane
 > served the uncensored V4.1 2.9-bit pack. Its numbers below stay accurate.
@@ -693,7 +703,7 @@ One frozen suite (`bench/qbench.py`) against the TensorFold Zig engine while it 
 
 <a id="dsv41-sglang"></a>
 
-## 🐋 DeepSeek V4.1 Flash · SGLang · 🟡 rollback
+## 🐋 DeepSeek V4.1 Flash · SGLang · ⚪ archived 2026-11-07 (rollback until 2026-10-17)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/lane-dsv41-sglang-dark.svg">
@@ -708,7 +718,7 @@ One frozen suite (`bench/qbench.py`) against the TensorFold Zig engine while it 
 
 <a id="deepseek-v4-1-flash"></a>
 
-## 🐋 DeepSeek V4.1 Flash · vLLM · 🟡 fallback
+## 🐋 DeepSeek V4.1 Flash · vLLM · ⚪ archived 2026-11-07 (fallback until 2026-10-17)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/lane-dsv41-vllm-dark.svg">
