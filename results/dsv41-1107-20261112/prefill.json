@@ -1,0 +1,34 @@
+{
+  "label": "baseline-1107",
+  "url": "http://forge:8000",
+  "model": "deepseek-v4.1-flash",
+  "date": "2026-11-12T09:14:11-0800",
+  "rows": [
+    {
+      "target": 32768,
+      "rep": 0,
+      "prompt_tokens": 33066,
+      "cached_tokens": 0,
+      "wall_s": 3.765,
+      "server_ttft_s": null,
+      "server_prefill_s": null,
+      "prompt_tok_s_wall": 8783.2,
+      "prompt_tok_s_server": null,
+      "reply": "v",
+      "tensorfold": {}
+    },
+    {
+      "target": 131072,
+      "rep": 0,
+      "prompt_tokens": 131823,
+      "cached_tokens": 0,
+      "wall_s": 15.085,
+      "server_ttft_s": null,
+      "server_prefill_s": null,
+      "prompt_tok_s_wall": 8738.7,
+      "prompt_tok_s_server": null,
+      "reply": "river",
+      "tensorfold": {}
+    }
+  ]
+}

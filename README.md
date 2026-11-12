@@ -8,31 +8,44 @@
 <p align="center">
   <img alt="cluster: 4× DGX Spark" src="https://img.shields.io/badge/cluster-4%C3%97%20DGX%20Spark-76b900">
   <img alt="serving: DeepSeek V4.1 Flash 1017 on spark-ds41f 1107" src="https://img.shields.io/badge/serving-DeepSeek%20V4.1%20Flash%201017%20%C2%B7%20spark--ds41f%201107-2a78d6">
-  <img alt="prefill 8,609 tok/s at 131K" src="https://img.shields.io/badge/prefill-8%2C609%20tok%2Fs%20%40131K-16a34a">
-  <img alt="updated 2026-11-07" src="https://img.shields.io/badge/updated-2026--11--07-8a8984">
+  <img alt="prefill 8,739 tok/s at 131K" src="https://img.shields.io/badge/prefill-8%2C739%20tok%2Fs%20%40131K-16a34a">
+  <img alt="updated 2026-11-12" src="https://img.shields.io/badge/updated-2026--11--12-8a8984">
 </p>
 
 <a id="now-serving"></a>
 
-## 📌 Now serving: DeepSeek V4.1 Flash 1017 · spark-ds41f 1107 (2026-11-07)
+## 📌 Now serving: DeepSeek V4.1 Flash 1017 · spark-ds41f 1107 (re-measured 2026-11-12)
 
-The Sparks now serve **DeepSeek V4.1 Flash 1017** on **`spark-ds41f` release 1107** — a vLLM + TileLang TP=4 world on
+The Sparks serve **DeepSeek V4.1 Flash 1017** on **`spark-ds41f` release 1107** — a vLLM + TileLang TP=4 world on
 the 64 KiB host profile, in a **switched** fabric rather than our old cable ring, with the uncensored MXFP4 rebuild of
-the same 1017 weights. **Prefill 8,540 / 8,609 / 8,142 tok/s at 32K / 131K / 262K**, one-stream decode **81 tok/s**,
-**524,288-token** context.
+the same 1017 weights. The latest measurement is **153.6 tok/s median server-side decode for one code stream**
+(temperature 0, thinking off), **8,783 / 8,739 tok/s wall-clock cold prefill at 32K / 131K**, and **524,288-token**
+context. The current 1107 lane has no fresh 262K measurement; **8,142 tok/s** is retained from 2026-11-07, measured
+with `servebench` rather than the client harness below.
 
-The headline number is real and reproducible: it is within 0.6 % of release 1107's own published reference
-(8,508 / 8,657 / 8,261) on a different fabric and a different checkpoint of the same model.
+The November 7 prefill number was reproducible: it was within 0.6 % of release 1107's own published reference
+(8,508 / 8,657 / 8,261) on a different fabric and a different checkpoint of the same model. The November 12 figures
+come from `spark-bench` client harnesses, not `servebench`: **they are current measurements, not an A/B claim or an
+engine-speed improvement over 81 tok/s**. Prefill prompts have a unique, uncached prefix; decode uses the same Python
+binary-search-tree prompt for ten measured windows across two separate batches. The raw rows are linked
+[below](#dsv41-1107-evidence).
 
 **Why it stays:**
 - **Prefill is 17 % faster than the previous live world** (7,332 → 8,609 tok/s at 131K) and within 0.6 % of release
   1107's own reference on a different fabric — the first time our numbers have matched upstream's without an asterisk.
+- **Decode depends on the workload.** Today’s 153.6 tok/s is a sequentially-run **code** stream; do not read it as the
+  rate for every prompt or as aggregate throughput. The November 7 `servebench` lane measured **81 tok/s** on its own
+  c1 code ruler. Both stay on the record, with their harnesses named.
 - **The character change is the point of the checkpoint.** `Infatoshi/…-MXFP4-uncensored` is a rebuild of the same 1017
-  weights with the same quant layout, so it loads on the same kernels and costs nothing measurable (0.8 % *faster*).
+  weights with the same quant layout, so it loads on the same kernels and cost nothing measurable on November 7
+  (0.8 % *faster* on that day’s prefill runs).
 - **Context is served at 524,288**, not 1M: our agents compact long before that, and every token of KV we do not reserve
   is memory the scheduler can put to work.
-- **Caveats:** every speed cell is two `servebench` repeats on one boot, uncensored weights, switched fabric. The
-  reference column is release 1107's own published manifest measured on their ring — close, not identical, conditions.
+- **Caveats:** all figures are on uncensored weights and the switched fabric. The November 7 speed cells were two
+  `servebench` repeats on one boot; November 12 prefill is one cold, uncached run per size and decode has ten measured
+  windows across two batches, each after two warm-ups. Keep those sample shapes beside the numbers. The historical reference column is release
+  1107's own published manifest measured on its ring — close, not identical, conditions. Concurrency on 1107 still has
+  not been re-measured after the November 7 note.
 
 Details: [the 1107 lane](#dsv41-1107) · [what we changed, in order](#dsv41-1107) · [the traps](#dsv41-1107) ·
 [the previous TensorFold world](#dsv41-1017) · [the GLM-5.3-Flash comparison](#glm53-fp4-vllm)
@@ -45,7 +58,7 @@ One cluster, one model at a time. Click a lane for its recipe.
 
 | | Lane | Status | Best numbers |
 | :-: | --- | --- | --- |
-| ⚡ | **[DeepSeek V4.1 Flash 1017 · spark-ds41f 1107 (vLLM + TileLang)](#dsv41-1107)** | 🟢 **live** since 2026-11-07 · [why](#now-serving) | **8,609 tok/s prefill @131K** (8,540 / 8,142 @32K / 262K) · **81 tok/s one stream** · TTFT 117 ms · 524,288 context · 16,384 batch budget · TP4 switched fabric |
+| ⚡ | **[DeepSeek V4.1 Flash 1017 · spark-ds41f 1107 (vLLM + TileLang)](#dsv41-1107)** | 🟢 **live** since 2026-11-07 · re-measured 2026-11-12 · [why](#now-serving) | **8,739 tok/s cold prefill @131K, wall clock** · **153.6 tok/s median for one code stream, server decode clock** · 524,288 context · 16,384 batch budget · TP4 switched fabric |
 | 🐋 | [DeepSeek V4.1 Flash 1017 · our TensorFold 1.1.2 rebase (Zig engine)](#dsv41-1017-tf112) | 🔁 **rollback** (last live 2026-10-22 → 2026-11-07) | **313 tok/s aggregate with 8 streams** · 212 with 4 · warm boot 166 s · 15/15 determinism hashes unchanged · same pack, **512K context** · single-stream code/prose not yet re-measured on this build |
 | 🐋 | [DeepSeek V4.1 Flash 1017 · TensorFold 1.1.0-era engine (Zig)](#dsv41-1017) | ⚪ archived | 152 code tok/s (162 for 4) · 296 tok/s aggregate with 8 streams · 67 prose · cold 200K prompt 35.7 s · 512K context (passkey at 520K) · MMLU 89.5 % · 3D 98 + 108/180 |
 | 🐋 | [DeepSeek V4.1 Flash · TensorFold (Zig engine)](#dsv41-tensorfold) | ⚪ archived | 129 code tok/s (218 for 4) · 66 prose (138 for 4) · cold 154K prompt 30 s |
@@ -82,7 +95,7 @@ That history is the point. When a new model comes out, the next engineer (or the
 
 - 🔌 **Fix the network first.** One IPv4 address per NCCL port. A leftover address alone cost 30% ([V4](models/deepseek-v4-flash/JOURNAL.md)). Getting RoCE right was worth 2.5× ([GLM](models/glm-5.3-flash/JOURNAL.md)).
 - 📏 **Measure decode from the stream:** count usage tokens from the first delta to the last. Wall time includes prompt reading, and chunk counts undercount speculative decoding.
-- 🎲 **Boots vary.** Compare A/B/A with a same-night control. `vm.compaction_proactiveness=0` ended a 50/50 slow-boot lottery ([V4.1](models/deepseek-v4.1-flash/JOURNAL.md#dsv41-2026-09-13)).
+- 🎲 **Boots vary.** Compare A/B/A with a same-night control. `vm.compaction_proactiveness=0` ended a 50/50 slow-boot lottery ([V4.1](models/deepseek-v4.1-flash/JOURNAL.md)).
 - 🔥 **Warm up before you trust a number.** JIT kernels and draft acceptance start cold (acceptance went from 2.6 at first boot to 7.95 an hour later). Warm the kernels at boot.
 - 🧮 **Unified memory is GPU memory.** Leave headroom (GLM crashed at 0.85 and is stable at 0.80) and drop the page cache before a start.
 - 💾 **No bulk disk writes on a serving node.** Engram reads NVMe on every step, so one slow rank stalls all four.
@@ -106,11 +119,29 @@ clock **unlocked** (~2,400 MHz under load), image **`spark-ds41f:1107`**, weight
 **`Infatoshi/DeepSeek-V4.1-Flash-1017-MXFP4-uncensored`** (`f07d8148`; same quant layout as official 1017 — `fp8` +
 `fp4` experts, 32×32 blocks, ue8m0).
 
+### Latest numbers (2026-11-12)
+
+| ruler | workload and sample | result |
+|---|---|---:|
+| cold prefill 32,768 | 33,066 prompt tokens, 0 cached, 1 run, client wall clock | **8,783.2 tok/s** |
+| cold prefill 131,072 | 131,823 prompt tokens, 0 cached, 1 run, client wall clock | **8,738.7 tok/s** |
+| one-stream decode, **server decode clock** | BST code prompt, 1,024 max tokens, temperature 0, thinking off, 10 sequential requests in 2 batches | **153.59 mean / 153.56 median tok/s** |
+| one-stream decode, **client stream clock** | same ten requests; usage tokens from first to last content delta | **153.43 mean / 153.38 median tok/s** |
+
+The 153.6 tok/s headline is the ten-request server median, rounded to one decimal. Server range **153.25–154.07 tok/s**;
+client range **153.05–153.90 tok/s**. Both save files are complete and have different SHA-256s; neither is a copy of
+the other. Source commands: `scripts/bench-decode.py --base-url http://forge:8000/v1 --model deepseek-v4.1-flash
+--max-tokens 1024 --warmup 2 --n 5`, and `bench/prefill-ladder.py http://forge:8000/v1 deepseek-v4.1-flash
+<out.json> 32768,131072 1 baseline-1107`. Server decode divides the Prometheus generation-token and decode-time deltas;
+the client rate starts after the first content token. Every measured decode request had one recorded success and no
+foreign traffic. These runs used the **same 1107 image, weights and serving config as November 7**, on a later boot;
+no engine change is claimed.
+
 <picture>
-  <img alt="From 6,853 to 8,540 tok/s prefill: 4 KiB clock-locked baseline, uncensored MXFP4 weights, DGX OS 7.6.0, clock unlocked (2,177 to 2,405 MHz), release 1107 — with the upstream 1107 reference at 8,657" src="docs/images/prefill-journey-20261107.png">
+  <img alt="Current 1107 measurements on November 12: cold prefill 8,783.20 tok/s at 32K and 8,738.70 tok/s at 131K, one cold request each with zero cached tokens, and one-stream code decode at a median 153.56 tok/s across ten sequential 1,024-token requests" src="docs/images/current-performance-20261112.png">
 </picture>
 
-### Numbers (2026-11-07, `servebench`, 2 repeats per size)
+### Numbers (2026-11-07 historical snapshot, `servebench`, 2 repeats per size)
 
 | prompt | ours | release 1107 reference | delta |
 |---|---:|---:|---:|
@@ -119,18 +150,34 @@ clock **unlocked** (~2,400 MHz under load), image **`spark-ds41f:1107`**, weight
 | 262,144 | **8,142** tok/s | 8,261 | −1.4 % |
 | one-stream decode | **81.0** tok/s | — | — |
 
-One stream, 10 windows: TTFT p50 **117 ms**, TPOT p50 **12.3 ms**, **2.37 tokens/step** accepted. Context **524,288**,
-batch budget **16,384**, 16 sequences. Cold boot with a cold JIT cache ≈10 min; warm ≈2 min.
+The following chart documents that November 7 journey and deliberately keeps its original values; read **8,540** there
+as 2026-11-07, not the latest 2026-11-12 prefill number above.
+
+<picture>
+  <img alt="Historical journey through 2026-11-07: from 6,853 to 8,540 tok/s prefill, with an upstream reference of 8,657; today's latest 131K measurement is 8,739" src="docs/images/prefill-journey-20261107.png">
+</picture>
+
+November 7 one stream, 10 windows: TTFT p50 **117 ms**, TPOT p50 **12.3 ms**, **2.37 tokens/step** accepted. Context
+**524,288**, batch budget **16,384**, 16 sequences. Cold boot with a cold JIT cache ≈10 min; warm ≈2 min.
 
 ### Against the engine we replaced
 
 The previous world on these same four machines was **TensorFold** — a bespoke Zig inference engine serving EXL3 2.9-bit packs. It is not an older version of this stack; it is a different species, and the trade went the other way on decode.
 
+The chart below is a **2026-11-07 historical snapshot**, not a current-decode panel. On November 12 the same 1107
+image measured **153.6 tok/s median one-stream code decode** with `spark-bench/scripts/bench-decode.py`. **Do not use
+this old chart or the new 153.6 figure to claim a 1.9× engine improvement**: the harnesses and samples differ, so no
+controlled A/B establishes that.
+
 <picture>
-  <img alt="TensorFold 1.1.2 versus spark-ds41f 1107: prefill 5,285 vs 8,540 tok/s at 32K, 5,749 vs 8,609 at 131K; decode 152 code and 67 prose one stream for TensorFold versus 81 for 1107, and 296 versus 239 aggregate at 8 streams" src="docs/images/engine-comparison-20261107.png">
+  <img alt="Historical November 7 engine snapshot: TensorFold 1.1.2 versus spark-ds41f 1107, then measured at 5,285 vs 8,540 tok/s prefill at 32K and 152 code tok/s vs 81; not the latest 153.6 tok/s measurement" src="docs/images/engine-comparison-20261107.png">
 </picture>
 
-**Prefill roughly +50%, decode roughly half.** TensorFold did 151.8 tok/s on code one stream (67.3 prose) and 296 tok/s aggregate across eight slots; this stack does 8.6K prefill but ~81 tok/s on one stream. We took that trade deliberately — long prompts were the thing we were waiting on — and the honest statement is that both numbers are in the chart, not just the flattering one. The 8-stream 239 was measured on the 1030 build; we have not re-measured concurrency on 1107.
+On November 7, TensorFold did 151.8 tok/s on code one stream (67.3 prose) and 296 tok/s aggregate across eight slots;
+the incoming stack did 8,609 prefill at 131K and 81 tok/s on its `servebench` c1 ruler. We took the prefill trade
+deliberately — long prompts were what we were waiting on — and both sides are on the record, not just the flattering
+one. The 8-stream 239 was measured on the 1030 build; concurrency on 1107 has not been re-measured, so **no new
+c1-to-c8 aggregate ratio is claimed here**.
 
 ### What we did to get here, in the order that mattered
 
@@ -198,10 +245,19 @@ Point `model` at your own weights in the profile (`config/cluster.local.json` �
 - **Bench only what you serve.** We deliberately do not bench 1M: our agents compact long before it, so the suite stops
   at 262K and the server runs 524,288.
 
+<a id="dsv41-1107-evidence"></a>
+
 ### Evidence
 
-- Raw runs (serving node, release 1107 harness): `results/private/suites/20261108T010559Z/prefill.json` (prefill) and
-  `…/20261108T010754Z/c1.json` (one stream).
+- November 12 raw results: [`prefill.json`](results/dsv41-1107-20261112/prefill.json) and
+  [`decode.json`](results/dsv41-1107-20261112/decode.json). The latter aggregates **two independent five-window
+  invocations**, records each batch's distinct file hash, and includes every per-request token count. Its complete
+  stdout, including warm-ups, is in [`decode-stdout.txt`](results/dsv41-1107-20261112/decode-stdout.txt) and
+  [`decode-stdout-fresh.txt`](results/dsv41-1107-20261112/decode-stdout-fresh.txt). Prefill is one run per size,
+  not a multi-run average; the 262K row belongs only to the dated November 7 snapshot.
+- November 7 raw runs (serving node, release 1107 harness): `results/private/suites/20261108T010559Z/prefill.json`
+  (prefill) and `…/20261108T010754Z/c1.json` (one stream). These evidence paths are not present in the current checkout; the newer measurements above
+  have committed raw receipts.
 - Same day, same harness, the legs that led here: 6,853 / 6,884 / 6,596 (4 KiB, clock-locked) → 6,928 / 6,946 / 6,662
   (uncensored weights) → 6,961 / 6,975 / 6,687 (OS 7.6.0, still locked) → 7,294 / 7,332 / 7,034 (clock unlocked) →
   **8,540 / 8,609 / 8,142** (release 1107).
@@ -714,7 +770,7 @@ One frozen suite (`bench/qbench.py`) against the TensorFold Zig engine while it 
 - 🔀 **EP2 beat EP4**: prose +5–12%; code mixed, up to +19% at 80k–160k.
 - 📦 **Engram pack published**, so you can skip the slow per-node pack step: [Hugging Face](https://huggingface.co/neko-legends/DeepSeek-V4.1-Flash-uncensored-engram-4x-spark).
 
-📘 [Profile & rollback](models/deepseek-v4.1-flash/README.md) · 📓 [Journal: the fixes it took](models/deepseek-v4.1-flash/JOURNAL.md#dsv41-sglang-2026-09-14) · 🧾 [Depth sweep](artifacts/tensorfold-v41-depth-20261001/REPORT.md)
+📘 [Profile & rollback](models/deepseek-v4.1-flash/README.md) · 📓 [Journal: the fixes it took](models/deepseek-v4.1-flash/JOURNAL.md) · 🧾 [Depth sweep](artifacts/tensorfold-v41-depth-20261001/REPORT.md)
 
 <a id="deepseek-v4-1-flash"></a>
 
@@ -729,7 +785,7 @@ One frozen suite (`bench/qbench.py`) against the TensorFold Zig engine while it 
 - 🎲 **The "gains" were the boot lottery:** A/B/A showed the champion settings matched the baseline.
 - 🧯 **Tool calls came back clean here** where our first SGLang lane corrupted them. That is why this lane shipped.
 
-📘 [Recipe & findings](docs/dsv41-vllm-tp4.md) · 📓 [Journal](models/deepseek-v4.1-flash/JOURNAL.md#deepseek-v4-1-flash) · 🧾 [Raw runs](artifacts/dsv41-vllm-20260910/)
+📘 [Recipe & findings](docs/dsv41-vllm-tp4.md) · 📓 [Journal](models/deepseek-v4.1-flash/JOURNAL.md) · 🧾 [Raw runs](artifacts/dsv41-vllm-20260910/)
 
 <a id="qwen-3-8-flash"></a>
 

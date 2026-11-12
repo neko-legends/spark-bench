@@ -1,0 +1,40 @@
+warmup 2 then n=5
+warmup 1: {'tok': 1024, 'ttft': 0.137, 'wall_tok_s': 152.7, 'server_tok_s': 152.77, 'success_delta': 1.0}
+warmup 2: {'tok': 1024, 'ttft': 0.133, 'wall_tok_s': 153.18, 'server_tok_s': 153.32, 'success_delta': 1.0}
+meas 1: {'tok': 1024, 'ttft': 0.131, 'wall_tok_s': 153.05, 'server_tok_s': 153.25, 'success_delta': 1.0}
+meas 2: {'tok': 1024, 'ttft': 0.131, 'wall_tok_s': 153.49, 'server_tok_s': 153.7, 'success_delta': 1.0}
+meas 3: {'tok': 1024, 'ttft': 0.145, 'wall_tok_s': 153.52, 'server_tok_s': 153.7, 'success_delta': 1.0}
+meas 4: {'tok': 1024, 'ttft': 0.132, 'wall_tok_s': 153.39, 'server_tok_s': 153.58, 'success_delta': 1.0}
+meas 5: {'tok': 1024, 'ttft': 0.135, 'wall_tok_s': 153.3, 'server_tok_s': 153.43, 'success_delta': 1.0}
+{
+  "server_decode": {
+    "n": 5,
+    "mean": 153.53,
+    "median": 153.58,
+    "sd": 0.17,
+    "min": 153.25,
+    "max": 153.7,
+    "trials": [
+      153.25,
+      153.43,
+      153.58,
+      153.7,
+      153.7
+    ]
+  },
+  "client_wall": {
+    "n": 5,
+    "mean": 153.35,
+    "median": 153.39,
+    "sd": 0.17,
+    "min": 153.05,
+    "max": 153.52,
+    "trials": [
+      153.05,
+      153.3,
+      153.39,
+      153.49,
+      153.52
+    ]
+  }
+}

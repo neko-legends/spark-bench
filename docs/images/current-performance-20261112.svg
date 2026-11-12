@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="960" viewBox="0 0 1600 960">
+<rect width="1600" height="960" fill="#10141b"/>
+<text x="90" y="85" fill="#95a7b9" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" >SPARK-BENCH  ·  2026-11-12</text>
+<text x="90" y="158" fill="#f4f6f8" font-family="Arial,Helvetica,sans-serif" font-size="50" font-weight="700" >DeepSeek V4.1 Flash · image 1107</text>
+<text x="90" y="212" fill="#c3cdd9" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="400" >Four DGX Sparks · TP4 · switched RoCE · Infatoshi MXFP4-uncensored weights</text>
+<rect x="90" y="260" width="1420" height="442" rx="14" fill="#171f2a"/>
+<text x="128" y="316" fill="#f1f5f8" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="650" >MEASURED ON THE CURRENT LIVE SERVING WORLD</text>
+<text x="128" y="381" fill="#d5dee8" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="400" >Cold prefill · 32,768 prompt tokens</text>
+<text x="1465" y="381" fill="#75c9eb" font-family="Arial,Helvetica,sans-serif" font-size="41" font-weight="700" text-anchor="end">8,783.20 tok/s</text>
+<text x="128" y="414" fill="#b0bece" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" >33,066 tokens · 1 request · zero cached · client wall clock includes network</text>
+<text x="128" y="490" fill="#d5dee8" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="400" >Cold prefill · 131,072 prompt tokens</text>
+<text x="1465" y="490" fill="#85d89c" font-family="Arial,Helvetica,sans-serif" font-size="41" font-weight="700" text-anchor="end">8,738.70 tok/s</text>
+<text x="128" y="523" fill="#b0bece" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" >131,823 tokens · 1 request · zero cached · client wall clock includes network</text>
+<text x="128" y="599" fill="#d5dee8" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="400" >Decode · concurrency 1 · code task</text>
+<text x="1465" y="599" fill="#edcf8c" font-family="Arial,Helvetica,sans-serif" font-size="41" font-weight="700" text-anchor="end">153.56 tok/s</text>
+<text x="128" y="632" fill="#b0bece" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="400" >median · 10 sequential 1,024-token requests in 2 batches · server clock</text>
+<path d="M128 446 H1465 M128 555 H1465" stroke="#2b3543"/>
+<text x="90" y="756" fill="#edf2f7" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="650" >Decode request</text>
+<text x="90" y="794" fill="#b7c5d3" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" >Frozen Python binary-search-tree task · temperature 0 · thinking off</text>
+<text x="90" y="831" fill="#b7c5d3" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" >Ten request medians aggregated from two batches. Server range 153.25–154.07 tok/s.</text>
+<text x="90" y="868" fill="#b7c5d3" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="400" >Same image, weights and serving config as 2026-11-07. No engine-improvement A/B is claimed.</text>
+<text x="90" y="915" fill="#95a7b9" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="400" >Receipts: results/dsv41-1107-20261112/ · prefill.json + decode.json + two stdout files</text>
+</svg>

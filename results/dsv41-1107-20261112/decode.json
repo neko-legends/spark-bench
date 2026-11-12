@@ -1,0 +1,149 @@
+{
+  "label": "dsv41-1107-20261112",
+  "harness": "spark-bench/scripts/bench-decode.py",
+  "source": "two independent invocations; every per-request rate retained; duplicate stdout detected and removed",
+  "temperature": 0,
+  "thinking": false,
+  "max_tokens": 1024,
+  "warmup_per_batch": 2,
+  "measured_per_batch": 5,
+  "results": {
+    "server_decode": {
+      "n": 10,
+      "mean": 153.59,
+      "median": 153.56,
+      "sd": 0.21,
+      "min": 153.25,
+      "max": 154.07,
+      "trials": [
+        153.49,
+        153.51,
+        153.53,
+        153.67,
+        154.07,
+        153.25,
+        153.43,
+        153.58,
+        153.7,
+        153.7
+      ]
+    },
+    "client_wall": {
+      "n": 10,
+      "mean": 153.43,
+      "median": 153.38,
+      "sd": 0.21,
+      "min": 153.05,
+      "max": 153.9,
+      "trials": [
+        153.32,
+        153.35,
+        153.37,
+        153.56,
+        153.9,
+        153.05,
+        153.3,
+        153.39,
+        153.49,
+        153.52
+      ]
+    },
+    "wall_tok_s": {
+      "n": 10,
+      "mean": 153.43,
+      "median": 153.38,
+      "sd": 0.21,
+      "min": 153.05,
+      "max": 153.9,
+      "trials": [
+        153.37,
+        153.35,
+        153.56,
+        153.32,
+        153.9,
+        153.05,
+        153.49,
+        153.52,
+        153.39,
+        153.3
+      ]
+    }
+  },
+  "batches": [
+    {
+      "stdout": "decode-stdout.txt",
+      "sha256": "09cd065bb8269fb0909ba7e63923ad57001843f28fe29161909aae3f329680bc",
+      "n": 5,
+      "summary": {
+        "server_decode": {
+          "n": 5,
+          "mean": 153.65,
+          "median": 153.53,
+          "sd": 0.22,
+          "min": 153.49,
+          "max": 154.07,
+          "trials": [
+            153.49,
+            153.51,
+            153.53,
+            153.67,
+            154.07
+          ]
+        },
+        "client_wall": {
+          "n": 5,
+          "mean": 153.5,
+          "median": 153.37,
+          "sd": 0.22,
+          "min": 153.32,
+          "max": 153.9,
+          "trials": [
+            153.32,
+            153.35,
+            153.37,
+            153.56,
+            153.9
+          ]
+        }
+      }
+    },
+    {
+      "stdout": "decode-stdout-fresh.txt",
+      "sha256": "5aa9c8a983f7d35bf751f36a592924609f9a6e20c32c4c3111b178901ec510a3",
+      "n": 5,
+      "summary": {
+        "server_decode": {
+          "n": 5,
+          "mean": 153.53,
+          "median": 153.58,
+          "sd": 0.17,
+          "min": 153.25,
+          "max": 153.7,
+          "trials": [
+            153.25,
+            153.43,
+            153.58,
+            153.7,
+            153.7
+          ]
+        },
+        "client_wall": {
+          "n": 5,
+          "mean": 153.35,
+          "median": 153.39,
+          "sd": 0.17,
+          "min": 153.05,
+          "max": 153.52,
+          "trials": [
+            153.05,
+            153.3,
+            153.39,
+            153.49,
+            153.52
+          ]
+        }
+      }
+    }
+  ],
+  "measured_at": "2026-11-12"
+}
